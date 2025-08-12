@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children }) {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session) {
         hasRedirectedRef.current = true;
-        router.replace('/unauthorized');
+        router.replace('/login');
       }
     };
     maybeRedirect();
