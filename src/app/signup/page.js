@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Head from 'next/head';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Custom Food Scanner Icon Component
 const FoodScannerIcon = ({ size = 80, isDark = false }) => {
@@ -118,13 +119,20 @@ export default function SignupScreen() {
   const confirmPasswordRef = useRef(null);
 
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
-    // Check for dark mode preference
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setIsDark(darkMode);
   }, []);
+
+  // If already authenticated, skip signup
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/home');
+    }
+  }, [user, loading, router]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -164,14 +172,11 @@ export default function SignupScreen() {
       }
 
       if (data.user) {
-        // Check if email confirmation is required
         if (data.session) {
-          // User is signed in immediately
-          router.push('/home');
+          router.replace('/home');
         } else {
-          // Email confirmation required
           alert('Please check your email to verify your account before logging in.');
-          router.push('/login');
+          router.replace('/login');
         }
       }
     } catch (error) {
@@ -429,7 +434,7 @@ export default function SignupScreen() {
                         />
                         <button
                           type="button"
-                          onClick={togglePasswordVisibility}
+                          onClick={() => setShowPassword(!showPassword)}
                           className="p-4 hover:scale-110 transition-transform duration-200"
                         >
                           <svg
@@ -493,7 +498,7 @@ export default function SignupScreen() {
                         />
                         <button
                           type="button"
-                          onClick={toggleConfirmPasswordVisibility}
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           className="p-4 hover:scale-110 transition-transform duration-200"
                         >
                           <svg
@@ -568,86 +573,17 @@ export default function SignupScreen() {
         </div>
 
         <style jsx>{`
-          @keyframes pulse-ring {
-            0% {
-              transform: scale(0.8);
-              opacity: 0.6;
-            }
-            100% {
-              transform: scale(1.2);
-              opacity: 0.2;
-            }
-          }
-          
-          @keyframes scan-line {
-            0% {
-              transform: translateY(-40px);
-              opacity: 0;
-            }
-            50% {
-              opacity: 1;
-            }
-            100% {
-              transform: translateY(40px);
-              opacity: 0;
-            }
-          }
-          
-          @keyframes float-particle {
-            0% {
-              transform: translateY(100px) translateX(0px);
-              opacity: 0;
-              transform: scale(0);
-            }
-            50% {
-              opacity: 0.6;
-              transform: scale(1);
-            }
-            100% {
-              transform: translateY(-100px) translateX(25px);
-              opacity: 0;
-              transform: scale(0);
-            }
-          }
-          
-          @keyframes fade-in-up {
-            from {
-              opacity: 0;
-              transform: translateY(50px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          
-          .animate-fade-in-up {
-            animation: fade-in-up 0.8s ease-out forwards;
-          }
-          
-          .animation-delay-200 {
-            animation-delay: 200ms;
-          }
-          
-          .animation-delay-400 {
-            animation-delay: 400ms;
-          }
-          
-          .animation-delay-600 {
-            animation-delay: 600ms;
-          }
-          
-          .animation-delay-800 {
-            animation-delay: 800ms;
-          }
-          
-          .rotate-360 {
-            transform: rotate(360deg);
-          }
-          
-          .scale-102 {
-            transform: scale(1.02);
-          }
+          @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.6; } 100% { transform: scale(1.2); opacity: 0.2; } }
+          @keyframes scan-line { 0% { transform: translateY(-40px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(40px); opacity: 0; } }
+          @keyframes float-particle { 0% { transform: translateY(100px) translateX(0px); opacity: 0; transform: scale(0); } 50% { opacity: 0.6; transform: scale(1); } 100% { transform: translateY(-100px) translateX(25px); opacity: 0; transform: scale(0); } }
+          @keyframes fade-in-up { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+          .animate-fade-in-up { animation: fade-in-up 0.8s ease-out forwards; }
+          .animation-delay-200 { animation-delay: 200ms; }
+          .animation-delay-400 { animation-delay: 400ms; }
+          .animation-delay-600 { animation-delay: 600ms; }
+          .animation-delay-800 { animation-delay: 800ms; }
+          .rotate-360 { transform: rotate(360deg); }
+          .scale-102 { transform: scale(1.02); }
         `}</style>
       </div>
     </>

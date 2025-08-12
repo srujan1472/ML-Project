@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Head from 'next/head';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Custom Food Scanner Icon Component
 const FoodScannerIcon = ({ size = 80, isDark = false }) => {
@@ -109,13 +110,20 @@ export default function LoginScreen() {
 
   const passwordRef = useRef(null);
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
-    // Check for dark mode preference
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setIsDark(darkMode);
   }, []);
+
+  // If already authenticated, skip login
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/home');
+    }
+  }, [user, loading, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -138,8 +146,7 @@ export default function LoginScreen() {
         throw signInError;
       }
       
-      // Redirect after successful login
-      router.push('/home');
+      router.replace('/home');
       
     } catch (error) {
       setError(error.message || 'An unexpected error occurred. Please try again.');
@@ -331,7 +338,7 @@ export default function LoginScreen() {
                         />
                         <button
                           type="button"
-                          onClick={togglePasswordVisibility}
+                          onClick={() => setShowPassword(!showPassword)}
                           className="p-4 hover:scale-110 transition-transform duration-200"
                         >
                           <svg
@@ -343,7 +350,7 @@ export default function LoginScreen() {
                             viewBox="0 0 24 24"
                           >
                             {showPassword ? (
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543 7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464m1.414 1.414L8.464 8.464m5.656 5.656l1.415 1.415m-1.415-1.415l-2.829-2.829m0 0a3 3 0 01-4.243-4.243m4.243 4.243L8.464 8.464" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464m1.414 1.414L8.464 8.464m5.656 5.656l1.415 1.415m-1.415-1.415l-2.829-2.829m0 0a3 3 0 01-4.243-4.243m4.243 4.243L8.464 8.464" />
                             ) : (
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7-1.275 4.057-5.065 7-9.543 7-4.477 0-8.268-2.943-9.542-7z" />
                             )}
@@ -356,7 +363,7 @@ export default function LoginScreen() {
                     <div className="text-right">
                       <button
                         type="button"
-                        onClick={navigateToForgotPassword}
+                        onClick={() => router.push('/forgot-password')}
                         className={`text-sm font-medium hover:underline transition-colors duration-200 ${
                           isDark ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -403,7 +410,7 @@ export default function LoginScreen() {
                       </span>
                       <button
                         type="button"
-                        onClick={navigateToSignup}
+                        onClick={() => router.push('/signup')}
                         className={`font-bold text-base hover:underline transition-colors duration-200 ${
                           isDark ? 'text-white hover:text-gray-200' : 'text-blue-600 hover:text-blue-700'
                         }`}
@@ -420,85 +427,30 @@ export default function LoginScreen() {
 
         <style jsx>{`
           @keyframes pulse-ring {
-            0% {
-              transform: scale(0.8);
-              opacity: 0.6;
-            }
-            100% {
-              transform: scale(1.2);
-              opacity: 0.2;
-            }
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.2); opacity: 0.2; }
           }
-          
           @keyframes scan-line {
-            0% {
-              transform: translateY(-40px);
-              opacity: 0;
-            }
-            50% {
-              opacity: 1;
-            }
-            100% {
-              transform: translateY(40px);
-              opacity: 0;
-            }
+            0% { transform: translateY(-40px); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(40px); opacity: 0; }
           }
-          
           @keyframes float-particle {
-            0% {
-              transform: translateY(100px) translateX(0px);
-              opacity: 0;
-              transform: scale(0);
-            }
-            50% {
-              opacity: 0.6;
-              transform: scale(1);
-            }
-            100% {
-              transform: translateY(-100px) translateX(25px);
-              opacity: 0;
-              transform: scale(0);
-            }
+            0% { transform: translateY(100px) translateX(0px); opacity: 0; transform: scale(0); }
+            50% { opacity: 0.6; transform: scale(1); }
+            100% { transform: translateY(-100px) translateX(25px); opacity: 0; transform: scale(0); }
           }
-          
           @keyframes fade-in-up {
-            from {
-              opacity: 0;
-              transform: translateY(50px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-          
-          .animate-fade-in-up {
-            animation: fade-in-up 0.8s ease-out forwards;
-          }
-          
-          .animation-delay-200 {
-            animation-delay: 200ms;
-          }
-          
-          .animation-delay-400 {
-            animation-delay: 400ms;
-          }
-          
-          .animation-delay-600 {
-            animation-delay: 600ms;
-          }
-          
-          .animation-delay-800 {
-            animation-delay: 800ms;
-          }
-          
-          .rotate-360 {
-            transform: rotate(360deg);
-          }
-          
-          .scale-102 {
-            transform: scale(1.02);
-          }
+          .animate-fade-in-up { animation: fade-in-up 0.8s ease-out forwards; }
+          .animation-delay-200 { animation-delay: 200ms; }
+          .animation-delay-400 { animation-delay: 400ms; }
+          .animation-delay-600 { animation-delay: 600ms; }
+          .animation-delay-800 { animation-delay: 800ms; }
+          .rotate-360 { transform: rotate(360deg); }
+          .scale-102 { transform: scale(1.02); }
         `}</style>
       </div>
     </>

@@ -1,16 +1,18 @@
 "use client"
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    if (!loading && !user && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.replace('/login');
     }
   }, [user, loading, router]);
 
@@ -22,5 +24,8 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  return user ? children : null;
+  // If we're redirecting due to no user, render nothing to avoid flicker
+  if (!user) return null;
+
+  return children;
 }
