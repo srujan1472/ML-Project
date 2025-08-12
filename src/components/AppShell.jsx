@@ -5,13 +5,13 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, User, Settings, Home, BarChart3, Moon, Sun, Laptop2, LogOut, Camera } from 'lucide-react';
+import { Menu, X, User, Home, BarChart3, Moon, Sun, Laptop2, LogOut, Camera, UserRound } from 'lucide-react';
 
 export default function AppShell({ children, title = 'Scanner App' }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-  const userName = user?.user_metadata?.full_name || 'User';
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
 
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -54,6 +54,8 @@ export default function AppShell({ children, title = 'Scanner App' }) {
     router.push(to);
   };
 
+  const themeIcon = theme === 'system' ? <Laptop2 size={20} /> : isDark ? <Moon size={20} /> : <Sun size={20} />;
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Top Navbar */}
@@ -76,7 +78,7 @@ export default function AppShell({ children, title = 'Scanner App' }) {
               className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
               title="Theme"
             >
-              {isDark ? <Moon size={20} /> : theme === 'system' ? <Laptop2 size={20} /> : <Sun size={20} />}
+              {themeIcon}
             </button>
             {themeMenuOpen && (
               <div className={`absolute right-0 top-10 z-50 w-40 rounded-md shadow-lg ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
@@ -99,11 +101,11 @@ export default function AppShell({ children, title = 'Scanner App' }) {
               <LogOut size={18} />
               <span className="ml-2 hidden sm:inline">Logout</span>
             </button>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 max-w-[150px]">
               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
                 <User size={18} />
               </div>
-              <span className="font-medium hidden xs:inline">{userName}</span>
+              <span className="font-medium truncate">{userName}</span>
             </div>
           </div>
         </div>
@@ -156,11 +158,11 @@ export default function AppShell({ children, title = 'Scanner App' }) {
             </li>
             <li>
               <button
-                onClick={() => navigate('/home/settings')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/home/settings' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+                onClick={() => navigate('/home/profile')}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/home/profile' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
               >
-                <Settings size={20} />
-                <span>Settings</span>
+                <UserRound size={20} />
+                <span>Profile</span>
               </button>
             </li>
           </ul>

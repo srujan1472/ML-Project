@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, BarChart3, AlertTriangle, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -15,8 +15,29 @@ const OnboardingPage = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // Load saved data
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('onboardingData');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setFormData((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch {}
+  }, []);
+
+  const saveToStorage = (data) => {
+    try {
+      localStorage.setItem('onboardingData', JSON.stringify(data));
+    } catch {}
+  };
+
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      saveToStorage(next);
+      return next;
+    });
     if (validationErrors[field]) setValidationErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
@@ -38,6 +59,7 @@ const OnboardingPage = () => {
     }
     setIsLoading(true);
     try {
+      saveToStorage(formData);
       await new Promise((r) => setTimeout(r, 800));
       alert('Profile completed successfully!');
     } finally {
