@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -10,10 +11,16 @@ export default function ProtectedRoute({ children }) {
   const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
-    if (!loading && !user && !hasRedirectedRef.current) {
-      hasRedirectedRef.current = true;
-      router.replace('/login');
-    }
+    const maybeRedirect = async () => {
+      if (loading || user || hasRedirectedRef.current) return;
+      // Double check session to avoid redirect race after fresh login
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        hasRedirectedRef.current = true;
+        router.replace('/login');
+      }
+    };
+    maybeRedirect();
   }, [user, loading, router]);
 
   if (loading) {

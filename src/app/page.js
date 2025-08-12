@@ -1,9 +1,7 @@
-import { LogIn } from "lucide-react";
-import Image from "next/image";
+"use client"
+
 import LoginScreen from "./login/page";
 
 export default function Home() {
-  return (
-   <LoginScreen/>
-  );
+  return <LoginScreen />;
 }
