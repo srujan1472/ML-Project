@@ -1,27 +1,47 @@
 "use client"
 
 import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
     const maybeRedirect = async () => {
-      if (loading || user || hasRedirectedRef.current) return;
-      // Double check session to avoid redirect race after fresh login
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
-        hasRedirectedRef.current = true;
-        router.replace('/unauthorized');
+      if (loading || hasRedirectedRef.current) return;
+
+      // Not authenticated -> go unauthorized
+      if (!user) {
+        // Double check session to avoid race
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session) {
+          hasRedirectedRef.current = true;
+          router.replace('/unauthorized');
+          return;
+        }
+      }
+
+      // Authenticated: if onboarding not completed, redirect to onboarding (unless already there)
+      if (user && pathname !== '/home/onboarding') {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!error && (!data || data.onboarding_completed !== true)) {
+          hasRedirectedRef.current = true;
+          router.replace('/home/onboarding');
+          return;
+        }
       }
     };
     maybeRedirect();
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   if (loading) {
     return (
@@ -31,7 +51,6 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  // If we're redirecting due to no user, render nothing to avoid flicker
   if (!user) return null;
 
   return children;

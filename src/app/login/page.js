@@ -118,12 +118,24 @@ export default function LoginScreen() {
     setIsDark(darkMode);
   }, []);
 
-  // If already authenticated, skip login
+  // If already authenticated, check onboarding completion and navigate
   useEffect(() => {
-    if (!loading && user) {
-      router.replace('/home');
-      router.refresh();
-    }
+    const routeIfReady = async () => {
+      if (!loading && user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (data && data.onboarding_completed === true) {
+          router.replace('/home');
+        } else {
+          router.replace('/home/onboarding');
+        }
+        router.refresh();
+      }
+    };
+    routeIfReady();
   }, [user, loading, router]);
 
   const handleLogin = async (e) => {
@@ -149,14 +161,39 @@ export default function LoginScreen() {
       
       // Ensure session is established before navigating
       const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData?.session) {
-        router.replace('/home');
+      if (sessionData?.session && sessionData?.session.user) {
+        const authUser = sessionData.session.user;
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', authUser.id)
+          .maybeSingle();
+        if (profileData && profileData.onboarding_completed === true) {
+          router.replace('/home');
+        } else {
+          router.replace('/home/onboarding');
+        }
         router.refresh();
       } else {
-        // Fallback: slight delay then navigate
-        setTimeout(() => {
-          router.replace('/home');
-          router.refresh();
+        setTimeout(async () => {
+          const { data: sessionData2 } = await supabase.auth.getSession();
+          const authUser2 = sessionData2?.session?.user;
+          if (authUser2) {
+            const { data: profileData2 } = await supabase
+              .from('profiles')
+              .select('onboarding_completed')
+              .eq('id', authUser2.id)
+              .maybeSingle();
+            if (profileData2 && profileData2.onboarding_completed === true) {
+              router.replace('/home');
+            } else {
+              router.replace('/home/onboarding');
+            }
+            router.refresh();
+          } else {
+            router.replace('/home');
+            router.refresh();
+          }
         }, 200);
       }
       
