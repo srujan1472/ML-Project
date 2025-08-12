@@ -157,9 +157,9 @@ const NextjsScannerApp = () => {
   const goToProductDetails = () => {
     if (!productData) return;
     try {
-      const productParam = encodeURIComponent(JSON.stringify(productData));
-      const warningsParam = encodeURIComponent(JSON.stringify(analysisWarnings || []));
-      router.push(`/products?product=${productParam}&warnings=${warningsParam}`);
+      sessionStorage.setItem('lastProduct', JSON.stringify(productData));
+      sessionStorage.setItem('lastWarnings', JSON.stringify(analysisWarnings || []));
+      router.push('/products');
     } catch (e) {
       console.error('Navigation error:', e);
       alert('Unable to open full product details.');
