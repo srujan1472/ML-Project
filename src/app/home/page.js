@@ -28,6 +28,8 @@ const NextjsScannerApp = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   
+  const router = useRouter();
+
   // Check if camera is supported
   const checkCameraSupport = () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -151,6 +153,18 @@ const NextjsScannerApp = () => {
       setProcessingBarcode(false);
     }
   };
+
+  const goToProductDetails = () => {
+    if (!productData) return;
+    try {
+      const productParam = encodeURIComponent(JSON.stringify(productData));
+      const warningsParam = encodeURIComponent(JSON.stringify(analysisWarnings || []));
+      router.push(`/products?product=${productParam}&warnings=${warningsParam}`);
+    } catch (e) {
+      console.error('Navigation error:', e);
+      alert('Unable to open full product details.');
+    }
+  };
   
   const handleManualBarcodeEntry = (e) => {
     if (e.key === 'Enter' && e.target.value) {
@@ -234,12 +248,7 @@ const NextjsScannerApp = () => {
                           )}
                         </div>
                       </div>
-                      {productData.ingredients_text && (
-                        <div className="mt-3">
-                          <p className="font-medium">Ingredients:</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{productData.ingredients_text}</p>
-                        </div>
-                      )}
+                      <button onClick={goToProductDetails} className="mt-4 inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">View full details</button>
                     </div>
                   )}
                   {analysisWarnings && analysisWarnings.length > 0 && (
