@@ -51,6 +51,16 @@ const OnboardingPage = () => {
     return errors;
   };
 
+  const computeBmi = (heightCm, weightKg) => {
+    const h = Number(heightCm);
+    const w = Number(weightKg);
+    if (!h || !w) return null;
+    const heightM = h / 100;
+    if (heightM <= 0) return null;
+    const bmi = w / (heightM * heightM);
+    return Number(bmi.toFixed(1));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errors = validateForm();
@@ -60,6 +70,8 @@ const OnboardingPage = () => {
     }
     setIsLoading(true);
     try {
+      const bmi = computeBmi(formData.height, formData.weight);
+
       const payload = {
         id: user?.id,             // PK per schema
         email: userEmail,
@@ -68,6 +80,7 @@ const OnboardingPage = () => {
         height: formData.height ? Number(formData.height) : null,
         weight: formData.weight ? Number(formData.weight) : null,
         allergies: formData.allergies,
+        bmi: bmi,
         onboarding_completed: true,
         created_at: new Date().toISOString(),
       };
@@ -78,7 +91,9 @@ const OnboardingPage = () => {
 
       if (error) throw error;
 
-      saveToStorage(formData);
+      // Save local fallback including BMI
+      saveToStorage({ ...formData, bmi });
+
       router.replace('/home/profile');
       router.refresh();
     } catch (error) {

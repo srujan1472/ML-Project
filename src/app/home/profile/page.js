@@ -1,16 +1,16 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AppShell from '@/components/AppShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Mail, User, Ruler, Weight, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Mail, User, Ruler, Weight, AlertTriangle, CheckCircle, Clock, HeartPulse } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState({ full_name: '', height: '', weight: '', allergies: '', email: '', onboarding_completed: false, created_at: '' });
+  const [profile, setProfile] = useState({ full_name: '', age: null, height: null, weight: null, allergies: '', email: '', onboarding_completed: false, created_at: '', bmi: null });
 
   useEffect(() => {
     let isCancelled = false;
@@ -19,7 +19,7 @@ export default function ProfilePage() {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('full_name, height, weight, allergies, email, onboarding_completed, created_at')
+          .select('full_name, age, height, weight, allergies, email, onboarding_completed, created_at, bmi')
           .eq('id', user.id)
           .maybeSingle();
         if (!isCancelled && data) {
@@ -38,11 +38,13 @@ export default function ProfilePage() {
           setProfile({
             full_name,
             email,
-            height: saved?.height || '',
-            weight: saved?.weight || '',
+            age: saved?.age ? Number(saved.age) : null,
+            height: saved?.height ? Number(saved.height) : null,
+            weight: saved?.weight ? Number(saved.weight) : null,
             allergies: saved?.allergies || '',
             onboarding_completed: false,
             created_at: '',
+            bmi: saved?.bmi ? Number(saved.bmi) : null,
           });
           setLoading(false);
         }
@@ -56,6 +58,24 @@ export default function ProfilePage() {
 
   const displayName = profile.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const email = profile.email || user?.email || '';
+
+  const computedBmi = useMemo(() => {
+    if (profile.bmi) return Number(profile.bmi.toFixed(1));
+    const h = Number(profile.height);
+    const w = Number(profile.weight);
+    if (!h || !w) return null;
+    const hm = h / 100;
+    if (hm <= 0) return null;
+    return Number((w / (hm * hm)).toFixed(1));
+  }, [profile.bmi, profile.height, profile.weight]);
+
+  const bmiColorClass = useMemo(() => {
+    const bmi = computedBmi;
+    if (!bmi) return 'text-gray-500';
+    if (bmi >= 18.5 && bmi <= 24.9) return 'text-green-600';
+    if ((bmi >= 16 && bmi < 18.5) || (bmi > 24.9 && bmi <= 29.9)) return 'text-orange-500';
+    return 'text-red-600';
+  }, [computedBmi]);
 
   return (
     <ProtectedRoute>
@@ -97,6 +117,20 @@ export default function ProfilePage() {
                     <div>
                       <p className="text-xs opacity-70">Weight (kg)</p>
                       <p className="font-medium">{profile.weight ?? '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
+                    <HeartPulse size={18} className="text-purple-600" />
+                    <div>
+                      <p className="text-xs opacity-70">BMI</p>
+                      <p className={`font-semibold ${bmiColorClass}`}>{computedBmi ?? '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
+                    <User size={18} className="text-teal-600" />
+                    <div>
+                      <p className="text-xs opacity-70">Age</p>
+                      <p className="font-medium">{profile.age ?? '—'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50 sm:col-span-2">
