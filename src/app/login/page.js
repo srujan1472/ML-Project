@@ -122,6 +122,7 @@ export default function LoginScreen() {
   useEffect(() => {
     if (!loading && user) {
       router.replace('/home');
+      router.refresh();
     }
   }, [user, loading, router]);
 
@@ -146,7 +147,18 @@ export default function LoginScreen() {
         throw signInError;
       }
       
-      router.replace('/home');
+      // Ensure session is established before navigating
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session) {
+        router.replace('/home');
+        router.refresh();
+      } else {
+        // Fallback: slight delay then navigate
+        setTimeout(() => {
+          router.replace('/home');
+          router.refresh();
+        }, 200);
+      }
       
     } catch (error) {
       setError(error.message || 'An unexpected error occurred. Please try again.');
