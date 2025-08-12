@@ -18,7 +18,7 @@ const OnboardingPage = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load saved data
+  // Load saved data (local fallback)
   useEffect(() => {
     try {
       const saved = localStorage.getItem('onboardingData');
@@ -30,9 +30,7 @@ const OnboardingPage = () => {
   }, []);
 
   const saveToStorage = (data) => {
-    try {
-      localStorage.setItem('onboardingData', JSON.stringify(data));
-    } catch {}
+    try { localStorage.setItem('onboardingData', JSON.stringify(data)); } catch {}
   };
 
   const handleInputChange = (field, value) => {
@@ -62,36 +60,25 @@ const OnboardingPage = () => {
     }
     setIsLoading(true);
     try {
-      // Persist to Supabase profiles table (supports either id or user_id schema)
       const payload = {
-        id: user?.id, // if your table uses primary key id = auth user id
-        user_id: user?.id, // fallback if your schema uses user_id
+        id: user?.id,             // PK per schema
         email: userEmail,
         full_name: userName,
         age: formData.age ? Number(formData.age) : null,
         height: formData.height ? Number(formData.height) : null,
         weight: formData.weight ? Number(formData.weight) : null,
         allergies: formData.allergies,
-        updated_at: new Date().toISOString(),
+        onboarding_completed: true,
+        created_at: new Date().toISOString(),
       };
 
-      // Try upsert on id
-      let { error: upsertError } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .upsert(payload, { onConflict: 'id' });
 
-      // If conflict column is user_id instead
-      if (upsertError) {
-        const { error: upsertByUserIdError } = await supabase
-          .from('profiles')
-          .upsert(payload, { onConflict: 'user_id' });
-        if (upsertByUserIdError) throw upsertByUserIdError;
-      }
+      if (error) throw error;
 
-      // Save local fallback
       saveToStorage(formData);
-
-      // Redirect to Profile to show latest data
       router.replace('/home/profile');
       router.refresh();
     } catch (error) {

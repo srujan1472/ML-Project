@@ -5,41 +5,29 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import AppShell from '@/components/AppShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Mail, User, Ruler, Weight, AlertTriangle } from 'lucide-react';
+import { Mail, User, Ruler, Weight, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState({ full_name: '', height: '', weight: '', allergies: '' });
+  const [profile, setProfile] = useState({ full_name: '', height: '', weight: '', allergies: '', email: '', onboarding_completed: false, created_at: '' });
 
   useEffect(() => {
     let isCancelled = false;
     const fetchProfile = async () => {
       if (!user) return;
       try {
-        // Try id column
-        const byId = await supabase
+        const { data } = await supabase
           .from('profiles')
-          .select('full_name, height, weight, allergies, email')
+          .select('full_name, height, weight, allergies, email, onboarding_completed, created_at')
           .eq('id', user.id)
           .maybeSingle();
-        if (!isCancelled && byId.data) {
-          setProfile(byId.data);
+        if (!isCancelled && data) {
+          setProfile(data);
           setLoading(false);
           return;
         }
-        // Try user_id column
-        const byUserId = await supabase
-          .from('profiles')
-          .select('full_name, height, weight, allergies, email')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (!isCancelled && byUserId.data) {
-          setProfile(byUserId.data);
-          setLoading(false);
-          return;
-        }
-      } catch (e) {}
+      } catch {}
 
       // Fallback to localStorage + auth metadata
       try {
@@ -53,6 +41,8 @@ export default function ProfilePage() {
             height: saved?.height || '',
             weight: saved?.weight || '',
             allergies: saved?.allergies || '',
+            onboarding_completed: false,
+            created_at: '',
           });
           setLoading(false);
         }
@@ -79,43 +69,55 @@ export default function ProfilePage() {
                 <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
-                  <User size={18} className="text-blue-600" />
-                  <div>
-                    <p className="text-xs opacity-70">Name</p>
-                    <p className="font-medium">{displayName}</p>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
+                    <User size={18} className="text-blue-600" />
+                    <div>
+                      <p className="text-xs opacity-70">Name</p>
+                      <p className="font-medium">{displayName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
+                    <Mail size={18} className="text-blue-600" />
+                    <div>
+                      <p className="text-xs opacity-70">Email</p>
+                      <p className="font-medium break-all">{email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
+                    <Ruler size={18} className="text-green-600" />
+                    <div>
+                      <p className="text-xs opacity-70">Height (cm)</p>
+                      <p className="font-medium">{profile.height ?? '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
+                    <Weight size={18} className="text-green-600" />
+                    <div>
+                      <p className="text-xs opacity-70">Weight (kg)</p>
+                      <p className="font-medium">{profile.weight ?? '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50 sm:col-span-2">
+                    <AlertTriangle size={18} className="text-orange-600" />
+                    <div>
+                      <p className="text-xs opacity-70">Allergies</p>
+                      <p className="font-medium">{profile.allergies || '—'}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
-                  <Mail size={18} className="text-blue-600" />
-                  <div>
-                    <p className="text-xs opacity-70">Email</p>
-                    <p className="font-medium break-all">{email}</p>
-                  </div>
+                <div className="mt-4 flex items-center gap-4">
+                  {profile.onboarding_completed ? (
+                    <span className="inline-flex items-center gap-2 text-green-600"><CheckCircle size={16} /> Onboarding completed</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 text-gray-500"><Clock size={16} /> Onboarding pending</span>
+                  )}
+                  {profile.created_at && (
+                    <span className="text-xs opacity-70">Updated: {new Date(profile.created_at).toLocaleString()}</span>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
-                  <Ruler size={18} className="text-green-600" />
-                  <div>
-                    <p className="text-xs opacity-70">Height (cm)</p>
-                    <p className="font-medium">{profile.height || '—'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
-                  <Weight size={18} className="text-green-600" />
-                  <div>
-                    <p className="text-xs opacity-70">Weight (kg)</p>
-                    <p className="font-medium">{profile.weight || '—'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50 sm:col-span-2">
-                  <AlertTriangle size={18} className="text-orange-600" />
-                  <div>
-                    <p className="text-xs opacity-70">Allergies</p>
-                    <p className="font-medium">{profile.allergies || '—'}</p>
-                  </div>
-                </div>
-              </div>
+              </>
             )}
           </div>
           <div className="text-xs opacity-60">

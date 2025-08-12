@@ -21,33 +21,21 @@ export default function AppShell({ children, title = 'Scanner App' }) {
   const sidebarRef = useRef(null);
   const themeMenuRef = useRef(null);
 
-  // Fetch profile name from Supabase, with fallback
+  // Fetch profile name from Supabase (profiles.id as PK), with fallback
   useEffect(() => {
     let isCancelled = false;
     const fetchProfileName = async () => {
       if (!user) return;
       try {
-        // Try id column
-        const byId = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('full_name')
           .eq('id', user.id)
           .maybeSingle();
-        if (!isCancelled && byId.data?.full_name) {
-          setProfileName(byId.data.full_name);
+        if (!isCancelled && data?.full_name) {
+          setProfileName(data.full_name);
           return;
         }
-        // Try user_id column as fallback
-        const byUserId = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (!isCancelled && byUserId.data?.full_name) {
-          setProfileName(byUserId.data.full_name);
-          return;
-        }
-        // Last resort: metadata or email prefix
         if (!isCancelled) {
           const metaName = user?.user_metadata?.full_name || '';
           const fallback = metaName || (user?.email ? user.email.split('@')[0] : 'User');
