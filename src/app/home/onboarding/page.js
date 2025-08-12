@@ -5,11 +5,14 @@ import { User, BarChart3, AlertTriangle, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AppShell from '@/components/AppShell';
+import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
 const OnboardingPage = () => {
   const { user } = useAuth();
   const userName = user?.user_metadata?.full_name || 'User';
   const userEmail = user?.email || 'user@example.com';
+  const router = useRouter();
 
   const [formData, setFormData] = useState({ age: '', height: '', weight: '', allergies: '' });
   const [validationErrors, setValidationErrors] = useState({});
@@ -59,9 +62,41 @@ const OnboardingPage = () => {
     }
     setIsLoading(true);
     try {
+      // Persist to Supabase profiles table (supports either id or user_id schema)
+      const payload = {
+        id: user?.id, // if your table uses primary key id = auth user id
+        user_id: user?.id, // fallback if your schema uses user_id
+        email: userEmail,
+        full_name: userName,
+        age: formData.age ? Number(formData.age) : null,
+        height: formData.height ? Number(formData.height) : null,
+        weight: formData.weight ? Number(formData.weight) : null,
+        allergies: formData.allergies,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Try upsert on id
+      let { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert(payload, { onConflict: 'id' });
+
+      // If conflict column is user_id instead
+      if (upsertError) {
+        const { error: upsertByUserIdError } = await supabase
+          .from('profiles')
+          .upsert(payload, { onConflict: 'user_id' });
+        if (upsertByUserIdError) throw upsertByUserIdError;
+      }
+
+      // Save local fallback
       saveToStorage(formData);
-      await new Promise((r) => setTimeout(r, 800));
-      alert('Profile completed successfully!');
+
+      // Redirect to Profile to show latest data
+      router.replace('/home/profile');
+      router.refresh();
+    } catch (error) {
+      console.error('Onboarding save error:', error);
+      alert('Failed to save profile. Please try again.');
     } finally {
       setIsLoading(false);
     }
