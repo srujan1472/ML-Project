@@ -4,12 +4,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Upload, Scan, X, Menu, User, Settings, Home, BarChart3, Moon, Sun, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { useRouter } from 'next/navigation';
 
 const NextjsScannerApp = () => {
   // App state
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Router
+  const router = useRouter();
   
   // Get user from auth context
   const { user } = useAuth();
@@ -227,9 +231,26 @@ const NextjsScannerApp = () => {
     setSidebarOpen(!sidebarOpen);
   };
   
-  // Handle sidebar item click
-  const handleSidebarItemClick = () => {
+  // Handle sidebar item click - navigate and/or trigger actions
+  const handleSidebarItemClick = (item) => {
     setSidebarOpen(false);
+    if (item === 'dashboard') {
+      router.push('/home');
+      return;
+    }
+    if (item === 'scanner') {
+      // Open scanner modal directly
+      handleCameraCapture();
+      return;
+    }
+    if (item === 'onboarding') {
+      router.push('/home/onboarding');
+      return;
+    }
+    if (item === 'settings') {
+      router.push('/home/settings');
+      return;
+    }
   };
   
   // Handle manual barcode entry
@@ -324,7 +345,7 @@ const NextjsScannerApp = () => {
               <ul className="space-y-2">
                 <li>
                   <button 
-                    onClick={handleSidebarItemClick}
+                    onClick={() => handleSidebarItemClick('dashboard')}
                     className={"w-full flex items-center space-x-3 px-3 py-2 rounded-lg " + (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}
                   >
                     <Home size={20} />
@@ -333,7 +354,7 @@ const NextjsScannerApp = () => {
                 </li>
                 <li>
                   <button 
-                    onClick={handleSidebarItemClick}
+                    onClick={() => handleSidebarItemClick('scanner')}
                     className={"w-full flex items-center space-x-3 px-3 py-2 rounded-lg " + (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}
                   >
                     <Camera size={20} />
@@ -351,7 +372,7 @@ const NextjsScannerApp = () => {
                 </li>
                 <li>
                   <button 
-                    onClick={handleSidebarItemClick}
+                    onClick={() => handleSidebarItemClick('settings')}
                     className={"w-full flex items-center space-x-3 px-3 py-2 rounded-lg " + (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}
                   >
                     <Settings size={20} />
