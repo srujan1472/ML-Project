@@ -1,21 +1,18 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Upload, Scan, X, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Camera, Scan, X, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
 const NextjsScannerApp = () => {
-  // App state
   const [loading, setLoading] = useState(false);
-  
-  // Get user from auth context
   const { user } = useAuth();
   const userName = user?.user_metadata?.full_name || 'User';
-  
-  // Barcode scanner state
+
   const [scannedBarcode, setScannedBarcode] = useState(null);
   const [barcodeType, setBarcodeType] = useState(null);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
@@ -23,103 +20,74 @@ const NextjsScannerApp = () => {
   const [productData, setProductData] = useState(null);
   const [productError, setProductError] = useState(null);
   const [analysisWarnings, setAnalysisWarnings] = useState([]);
-  
-  // Refs
+
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  
+  const canvasRef = useRef(null); // kept for layout
+  const codeReaderRef = useRef(null);
+  const isScanningRef = useRef(false);
+
   const router = useRouter();
 
-  // Check if camera is supported
-  const checkCameraSupport = () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      return true;
-    } else {
-      alert('Camera access is not supported by your browser');
-      return false;
-    }
-  };
-  
-  // Handle camera capture for barcode scanning
-  const handleCameraCapture = async () => {
+  const startScanner = async () => {
+    if (isScanningRef.current) return;
+    isScanningRef.current = true;
+    setScannedBarcode(null);
+    setBarcodeType(null);
+    setProductData(null);
+    setProductError(null);
+    setAnalysisWarnings([]);
+
     try {
-      if (!checkCameraSupport()) return;
-      
-      setShowBarcodeScanner(true);
-      setScannedBarcode(null);
-      setBarcodeType(null);
-      setProductData(null);
-      setProductError(null);
-      setAnalysisWarnings([]);
-      
-      setTimeout(async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' }
-          });
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current.play();
-            };
+      const reader = new BrowserMultiFormatReader();
+      codeReaderRef.current = reader;
+      const videoEl = videoRef.current;
+
+      await reader.decodeFromVideoDevice(
+        undefined,
+        videoEl,
+        async (result, err, controls) => {
+          if (result) {
+            const text = result.getText();
+            const format = result.getBarcodeFormat();
+            setScannedBarcode(text);
+            setBarcodeType(format);
+            // Stop scanning while we process this code
+            controls.stop();
+            isScanningRef.current = false;
+            setShowBarcodeScanner(false);
+            await processBarcodeData(text, format);
           }
-        } catch (error) {
-          console.error('Error accessing camera:', error);
-          setShowBarcodeScanner(false);
-          if (error.name === 'NotAllowedError') {
-            alert('Camera access denied. Please allow camera access to use the scanner.');
-          } else if (error.name === 'NotFoundError') {
-            alert('No camera found on your device.');
-          } else if (error.name === 'NotSupportedError') {
-            alert('Your browser does not support camera access or the requested camera mode.');
-          } else {
-            alert(`Camera error: ${error.message}`);
-          }
+          // ignore scanning errors; reader continues
         }
-      }, 500);
+      );
     } catch (error) {
-      console.error('Camera capture error:', error);
-      alert('Failed to initialize camera');
+      console.error('Scanner init error:', error);
+      alert('Failed to start barcode scanner');
       setShowBarcodeScanner(false);
+      isScanningRef.current = false;
+      if (codeReaderRef.current) {
+        try { codeReaderRef.current.reset(); } catch {}
+      }
     }
   };
-  
-  // Capture image from camera for barcode scanning
-  const captureImage = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const stream = video?.srcObject;
-    
-    if (video && canvas) {
-      const context = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const simulatedBarcode = Math.floor(Math.random() * 9000000000000) + 1000000000000;
-      handleBarcodeScanned(simulatedBarcode.toString());
+
+  const stopScanner = () => {
+    if (codeReaderRef.current) {
+      try { codeReaderRef.current.reset(); } catch {}
+      codeReaderRef.current = null;
     }
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
+    isScanningRef.current = false;
   };
-  
-  const stopCameraStream = () => {
-    const video = videoRef.current;
-    if (video && video.srcObject) {
-      video.srcObject.getTracks().forEach(track => track.stop());
-      video.srcObject = null;
-    }
+
+  const handleOpenScanner = () => {
+    setShowBarcodeScanner(true);
+    // give modal time to mount video element
+    setTimeout(() => {
+      startScanner();
+    }, 250);
   };
-  
-  const handleBarcodeScanned = (data) => {
-    setScannedBarcode(data);
-    setBarcodeType('EAN-13');
-    stopCameraStream();
-    setShowBarcodeScanner(false);
-    processBarcodeData(data, 'EAN-13');
-  };
-  
-  const processBarcodeData = async (data, type) => {
+
+  const processBarcodeData = async (data, format) => {
     setProcessingBarcode(true);
     setProductData(null);
     setProductError(null);
@@ -165,14 +133,7 @@ const NextjsScannerApp = () => {
       alert('Unable to open full product details.');
     }
   };
-  
-  const handleManualBarcodeEntry = (e) => {
-    if (e.key === 'Enter' && e.target.value) {
-      handleBarcodeScanned(e.target.value);
-      setShowBarcodeScanner(false);
-    }
-  };
-  
+
   const getWarningIcon = (warning) => {
     if (warning.toLowerCase().includes('allergen') || warning.toLowerCase().includes('allergy')) {
       return <AlertTriangle className="text-red-500" size={16} />;
@@ -181,7 +142,13 @@ const NextjsScannerApp = () => {
     }
     return <Info className="text-blue-500" size={16} />;
   };
-  
+
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -189,7 +156,7 @@ const NextjsScannerApp = () => {
       </div>
     );
   }
-  
+
   return (
     <ProtectedRoute>
       <AppShell title="Scanner App">
@@ -204,14 +171,14 @@ const NextjsScannerApp = () => {
                 <Scan className="mr-2 text-green-500" size={20} />
                 <h3 className="text-lg font-semibold">Barcode Scanner</h3>
               </div>
-              <p className="mb-4">Scan product barcodes to retrieve detailed nutritional information and health warnings.</p>
+              <p className="mb-4">Open the camera and place the barcode inside the frame. Detection starts automatically.</p>
               <button
-                onClick={handleCameraCapture}
+                onClick={handleOpenScanner}
                 disabled={processingBarcode}
                 className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors mb-6 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 <Scan className="mr-2" size={18} />
-                {processingBarcode ? 'Processing...' : 'Scan Barcode'}
+                {processingBarcode ? 'Processing...' : 'Open Scanner'}
               </button>
               {scannedBarcode && (
                 <div className="p-4 rounded-lg bg-gray-100 dark:bg-gray-700 mb-4">
@@ -289,13 +256,12 @@ const NextjsScannerApp = () => {
               <div className="relative">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Barcode Scanner</h3>
-                  <button onClick={() => { setShowBarcodeScanner(false); stopCameraStream(); }} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+                  <button onClick={() => { setShowBarcodeScanner(false); stopScanner(); }} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
                     <X size={20} />
                   </button>
                 </div>
                 <div className="relative w-full" style={{ height: '300px' }}>
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                  <canvas ref={canvasRef} className="hidden" />
+                  <video ref={videoRef} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-48 h-48 border-2 border-white rounded-lg relative">
                       <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-green-500 rounded-tl-lg"></div>
@@ -305,20 +271,8 @@ const NextjsScannerApp = () => {
                     </div>
                   </div>
                   <div className="absolute bottom-4 left-4 right-4 text-center">
-                    <p className="text-white text-sm bg-black bg-opacity-50 px-3 py-2 rounded-lg">Position barcode within the frame</p>
+                    <p className="text-white text-sm bg-black bg-opacity-50 px-3 py-2 rounded-lg">Place the barcode within the frame to auto-scan</p>
                   </div>
-                </div>
-                <div className="p-4 text-center space-y-3">
-                  <button onClick={captureImage} className="bg-blue-500 px-4 py-2 text-white rounded-lg hover:bg-blue-600 w-full">
-                    <Camera className="inline mr-2" size={18} />
-                    Capture & Scan
-                  </button>
-                  <div className="flex items-center">
-                    <hr className="flex-grow border-gray-300 dark:border-gray-600" />
-                    <span className="px-3 text-sm text-gray-500 dark:text-gray-400">OR</span>
-                    <hr className="flex-grow border-gray-300 dark:border-gray-600" />
-                  </div>
-                  <input type="text" placeholder="Enter barcode number manually" className="px-3 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white w-full" onKeyPress={handleManualBarcodeEntry} />
                 </div>
               </div>
             </div>
