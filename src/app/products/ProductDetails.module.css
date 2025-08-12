@@ -1,0 +1,151 @@
+.container { 
+  padding: 20px; 
+  max-width: 800px; 
+  margin: 0 auto; 
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
+} 
+
+.scroll { 
+  padding-bottom: 40px; 
+} 
+
+.loading { 
+  text-align: center; 
+  padding: 40px; 
+  font-size: 18px; 
+  color: #666; 
+} 
+
+.header { 
+  font-size: 28px; 
+  font-weight: bold; 
+  margin-bottom: 24px; 
+  color: #333; 
+  line-height: 1.2; 
+} 
+
+.section { 
+  margin-bottom: 16px; 
+} 
+
+.label { 
+  margin-top: 20px; 
+  margin-bottom: 8px; 
+  font-weight: 600; 
+  font-size: 16px; 
+  color: #444; 
+} 
+
+.text { 
+  font-size: 14px; 
+  line-height: 1.4; 
+  margin: 4px 0; 
+  color: #555; 
+} 
+
+.warning { 
+  color: orange !important; 
+} 
+
+.error { 
+  color: red !important; 
+} 
+
+.nutritionContainer { 
+  background-color: rgba(0, 150, 0, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #009600; 
+} 
+
+.nutritionScoreContainer { 
+  background-color: rgba(255, 150, 0, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #ff9600; 
+} 
+
+.ecoContainer { 
+  background-color: rgba(0, 200, 100, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #00c864; 
+} 
+
+.warningContainer { 
+  background-color: rgba(255, 165, 0, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #ffa500; 
+} 
+
+.warningsContainer { 
+  background-color: rgba(255, 0, 0, 0.05); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #ff0000; 
+} 
+
+.datesContainer { 
+  background-color: rgba(100, 100, 100, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #646464; 
+} 
+
+.contributorsContainer { 
+  background-color: rgba(0, 100, 200, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #0064c8; 
+} 
+
+.statsContainer { 
+  background-color: rgba(150, 0, 150, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #960096; 
+} 
+
+.qualityContainer { 
+  background-color: rgba(200, 100, 0, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #c86400; 
+} 
+
+.imagesContainer { 
+  background-color: rgba(0, 150, 150, 0.1); 
+  padding: 16px; 
+  border-radius: 8px; 
+  margin-top: 8px; 
+  border-left: 4px solid #009696; 
+} 
+
+/* Responsive design */ 
+@media (max-width: 768px) { 
+  .container { 
+    padding: 16px; 
+  } 
+  
+  .header { 
+    font-size: 24px; 
+  } 
+  
+  .label { 
+    font-size: 15px; 
+  } 
+  
+  .text { 
+    font-size: 13px; 
+  } 
+}
