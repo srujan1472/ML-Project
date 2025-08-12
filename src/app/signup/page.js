@@ -102,6 +102,7 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [gender, setGender] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -142,6 +143,11 @@ export default function SignupScreen() {
       return;
     }
 
+    if (!gender) {
+      setError('Please select a gender.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Your passwords do not match. Please try again.');
       return;
@@ -156,13 +162,14 @@ export default function SignupScreen() {
     setError('');
 
     try {
-      // Create user with Supabase
+      // Create user with Supabase, store name and gender in user metadata
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: name,
+            gender,
           },
         },
       });
@@ -171,13 +178,28 @@ export default function SignupScreen() {
         throw signUpError;
       }
 
-      if (data.user) {
-        if (data.session) {
-          router.replace('/home');
-        } else {
-          alert('Please check your email to verify your account before logging in.');
-          router.replace('/login');
+      // If session exists (no email confirmation required), upsert into profiles
+      if (data?.session && data?.user) {
+        const payload = {
+          id: data.user.id,
+          email,
+          full_name: name,
+          gender,
+          onboarding_completed: false,
+        };
+        // profiles.id is PK; RLS policy must allow id = auth.uid()
+        const { error: upsertError } = await supabase
+          .from('profiles')
+          .upsert(payload, { onConflict: 'id' });
+        if (upsertError) {
+          // Non-fatal; continue redirecting
+          console.warn('Profile upsert warning:', upsertError.message);
         }
+        router.replace('/home');
+      } else {
+        // Email confirmation flow
+        alert('Please check your email to verify your account before logging in.');
+        router.replace('/login');
       }
     } catch (error) {
       setError(error.message || 'An unexpected error occurred. Please try again.');
@@ -303,6 +325,11 @@ export default function SignupScreen() {
                   </div>
 
                   <form onSubmit={handleSignup} className="space-y-6">
+                    {error && (
+                      <div className={`p-3 rounded-lg text-sm ${isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-100 text-red-600'}`}>
+                        {error}
+                      </div>
+                    )}
                     
                     {/* Name input */}
                     <div className="relative">
@@ -434,7 +461,7 @@ export default function SignupScreen() {
                         />
                         <button
                           type="button"
-                          onClick={() => setShowPassword(!showPassword)}
+                          onClick={togglePasswordVisibility}
                           className="p-4 hover:scale-110 transition-transform duration-200"
                         >
                           <svg
@@ -496,27 +523,23 @@ export default function SignupScreen() {
                             }
                           }}
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="p-4 hover:scale-110 transition-transform duration-200"
-                        >
-                          <svg
-                            className={`w-5 h-5 transition-transform duration-200 ${
-                              showConfirmPassword ? 'rotate-180' : 'rotate-0'
-                            } ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            {showConfirmPassword ? (
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464m1.414 1.414L8.464 8.464m5.656 5.656l1.415 1.415m-1.415-1.415l-2.829-2.829m0 0a3 3 0 01-4.243-4.243m4.243 4.243L8.464 8.464" />
-                            ) : (
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7-1.275 4.057-5.065 7-9.543 7-4.477 0-8.268-2.943-9.542-7z" />
-                            )}
-                          </svg>
-                        </button>
                       </div>
+                    </div>
+
+                    {/* Gender select */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Gender</label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className={`w-full px-4 py-3 rounded-2xl border ${isDark ? 'bg-gray-700/60 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
+                      >
+                        <option value="" disabled>Choose gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer_not_to_say">Prefer not to say</option>
+                      </select>
                     </div>
 
                     {/* Sign Up button */}

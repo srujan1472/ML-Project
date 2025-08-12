@@ -5,12 +5,12 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import AppShell from '@/components/AppShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Mail, User, Ruler, Weight, AlertTriangle, CheckCircle, Clock, HeartPulse } from 'lucide-react';
+import { Mail, User, Ruler, Weight, AlertTriangle, CheckCircle, Clock, HeartPulse, Venus, Mars } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState({ full_name: '', age: null, height: null, weight: null, allergies: '', email: '', onboarding_completed: false, created_at: '', bmi: null });
+  const [profile, setProfile] = useState({ full_name: '', age: null, height: null, weight: null, allergies: '', email: '', onboarding_completed: false, created_at: '', bmi: null, gender: '' });
 
   useEffect(() => {
     let isCancelled = false;
@@ -19,7 +19,7 @@ export default function ProfilePage() {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('full_name, age, height, weight, allergies, email, onboarding_completed, created_at, bmi')
+          .select('full_name, age, height, weight, allergies, email, onboarding_completed, created_at, bmi, gender')
           .eq('id', user.id)
           .maybeSingle();
         if (!isCancelled && data) {
@@ -45,6 +45,7 @@ export default function ProfilePage() {
             onboarding_completed: false,
             created_at: '',
             bmi: saved?.bmi ? Number(saved.bmi) : null,
+            gender: user?.user_metadata?.gender || '',
           });
           setLoading(false);
         }
@@ -127,6 +128,15 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50">
+                    {(profile.gender === 'male' || profile.gender === 'female') ? (
+                      profile.gender === 'male' ? <Mars size={18} className="text-sky-600" /> : <Venus size={18} className="text-pink-600" />
+                    ) : <User size={18} className="text-teal-600" />}
+                    <div>
+                      <p className="text-xs opacity-70">Gender</p>
+                      <p className="font-medium capitalize">{profile.gender || user?.user_metadata?.gender || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50 sm:col-span-2">
                     <User size={18} className="text-teal-600" />
                     <div>
                       <p className="text-xs opacity-70">Age</p>
