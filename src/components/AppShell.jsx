@@ -11,15 +11,61 @@ export default function AppShell({ children, title = 'Scanner App' }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
 
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [profileName, setProfileName] = useState('');
   const sidebarRef = useRef(null);
   const themeMenuRef = useRef(null);
+
+  // Fetch profile name from Supabase, with fallback
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchProfileName = async () => {
+      if (!user) return;
+      try {
+        // Try id column
+        const byId = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!isCancelled && byId.data?.full_name) {
+          setProfileName(byId.data.full_name);
+          return;
+        }
+        // Try user_id column as fallback
+        const byUserId = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!isCancelled && byUserId.data?.full_name) {
+          setProfileName(byUserId.data.full_name);
+          return;
+        }
+        // Last resort: metadata or email prefix
+        if (!isCancelled) {
+          const metaName = user?.user_metadata?.full_name || '';
+          const fallback = metaName || (user?.email ? user.email.split('@')[0] : 'User');
+          setProfileName(fallback);
+        }
+      } catch {
+        if (!isCancelled) {
+          const metaName = user?.user_metadata?.full_name || '';
+          const fallback = metaName || (user?.email ? user.email.split('@')[0] : 'User');
+          setProfileName(fallback);
+        }
+      }
+    };
+    fetchProfileName();
+    return () => {
+      isCancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -101,11 +147,11 @@ export default function AppShell({ children, title = 'Scanner App' }) {
               <LogOut size={18} />
               <span className="ml-2 hidden sm:inline">Logout</span>
             </button>
-            <div className="flex items-center space-x-2 max-w-[150px]">
+            <div className="flex items-center space-x-2 max-w-[180px]">
               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
                 <User size={18} />
               </div>
-              <span className="font-medium truncate">{userName}</span>
+              <span className="font-medium truncate">{profileName || 'User'}</span>
             </div>
           </div>
         </div>
