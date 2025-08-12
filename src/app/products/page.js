@@ -1,11 +1,24 @@
 "use client";
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AppShell from '@/components/AppShell';
 import styles from './ProductDetails.module.css';
 
 export const dynamic = 'force-dynamic';
+
+function safeParse(param) {
+  if (!param) return null;
+  try {
+    return JSON.parse(decodeURIComponent(param));
+  } catch {
+    try {
+      return JSON.parse(param);
+    } catch {
+      return null;
+    }
+  }
+}
 
 function formatTag(tag = '') {
   return String(tag).replace(/^en:/, '').replace(/-/g, ' ');
