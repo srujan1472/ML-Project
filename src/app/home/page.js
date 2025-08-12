@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Upload, Scan, X, Menu, User, Settings, Home, BarChart3, Moon, Sun, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Camera, Upload, Scan, X, Menu, User, Settings, Home, BarChart3, Moon, Sun, AlertTriangle, CheckCircle, Info, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 const NextjsScannerApp = () => {
   // App state
@@ -51,6 +52,16 @@ const NextjsScannerApp = () => {
       };
     }
   }, [sidebarOpen]);
+  
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.replace('/login');
+      router.refresh();
+    } catch (e) {
+      console.error('Logout error', e);
+    }
+  };
   
   // Check if camera is supported
   const checkCameraSupport = () => {
@@ -283,9 +294,7 @@ const NextjsScannerApp = () => {
   return (
     <ProtectedRoute>
       <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-        {/* Content starts here - Navbar removed */}
-        
-        {/* Sidebar */}
+        {/* Navbar */}
         <nav className={`border-b px-4 py-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -303,8 +312,17 @@ const NextjsScannerApp = () => {
               <button 
                 onClick={() => setDarkMode(!darkMode)}
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                title={darkMode ? 'Light mode' : 'Dark mode'}
               >
                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-red-100 text-red-600 flex items-center"
+                title="Logout"
+              >
+                <LogOut size={18} />
+                <span className="ml-2 hidden sm:inline">Logout</span>
               </button>
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
