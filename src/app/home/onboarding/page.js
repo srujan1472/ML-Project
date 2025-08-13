@@ -22,10 +22,10 @@ const OnboardingPage = () => {
   const [noAllergies, setNoAllergies] = useState(false);
 
   const COMMON_ALLERGENS = useMemo(() => [
-    'Milk', 'Eggs', 'Fish', 'Shellfish', 'Tree Nuts', 'Peanuts', 'Wheat', 'Soy', 'Sesame',
-    'Gluten', 'Mustard', 'Celery', 'Sulfites', 'Lupin', 'Molluscs', 'Corn', 'Coconut', 'Yeast',
-    'Almond', 'Walnut', 'Hazelnut', 'Pistachio', 'Cashew', 'Pecan', 'Brazil Nut', 'Macadamia',
-    'Crustaceans', 'Shrimp', 'Crab', 'Lobster', 'Oyster', 'Scallop'
+    'Wheat', 'Almonds', 'Apple', 'Avoine', 'Banana', 'Barley', 'Cashew nuts', 'Soy', 'Celery',
+    'Cereals', 'Chilli', 'Celery', 'Eggs', 'Fruit', 'Gelatin', 'Milk', 'Milk solids', 'Millet',
+    'Mustard', 'Walnut', 'Nuts', 'Oats', 'Onion', 'Orange', 'Peanuts', 'Pecan nuts',
+    'Soybeans '
   ], []);
 
   // Load saved data (local fallback)
