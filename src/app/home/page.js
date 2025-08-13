@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
+import { supabase } from '@/lib/supabaseClient';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 const NextjsScannerApp = () => {
@@ -127,7 +128,16 @@ const NextjsScannerApp = () => {
       });
       if (!analyzeResponse.ok) throw new Error(`Analysis error: ${analyzeResponse.status}`);
       const analysisResult = await analyzeResponse.json();
-      if (analysisResult.warnings && Array.isArray(analysisResult.warnings)) setAnalysisWarnings(analysisResult.warnings);
+
+      // Compute client-side allergen matches against user's saved allergies
+      const userAllergens = await fetchUserAllergens();
+      const productAllergens = extractProductAllergens(productData);
+      const matchedAllergens = matchAllergens(userAllergens, productAllergens);
+
+      const serverWarnings = Array.isArray(analysisResult.warnings) ? analysisResult.warnings : [];
+      const allergenWarnings = matchedAllergens.map((a) => `Allergen alert: contains ${a}`);
+      const combined = dedupeWarnings([...serverWarnings, ...allergenWarnings]);
+      if (combined.length > 0) setAnalysisWarnings(combined);
     } catch (error) {
       console.error('Error fetching product data:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -136,6 +146,103 @@ const NextjsScannerApp = () => {
     } finally {
       setProcessingBarcode(false);
     }
+  };
+
+  const normalizeAllergen = (name) => {
+    if (!name) return '';
+    try {
+      return String(name).toLowerCase().trim();
+    } catch {
+      return '';
+    }
+  };
+
+  const extractProductAllergens = (product) => {
+    const results = new Set();
+    if (!product || typeof product !== 'object') return [];
+    const pushTokens = (value) => {
+      if (!value) return;
+      if (Array.isArray(value)) {
+        value.forEach((v) => pushTokens(v));
+        return;
+      }
+      const str = String(value);
+      // Split by comma/semicolon and also handle tag format like 'en:milk'
+      str.split(/[;,]/).forEach((part) => {
+        const token = part.includes(':') ? part.split(':').pop() : part;
+        const norm = normalizeAllergen(token);
+        if (norm) results.add(norm);
+      });
+    };
+    pushTokens(product.allergens);
+    pushTokens(product.allergens_from_user);
+    pushTokens(product.allergens_from_ingredients);
+    if (Array.isArray(product.allergens_tags)) {
+      product.allergens_tags.forEach((tag) => {
+        const token = typeof tag === 'string' && tag.includes(':') ? tag.split(':').pop() : tag;
+        const norm = normalizeAllergen(token);
+        if (norm) results.add(norm);
+      });
+    }
+    return Array.from(results);
+  };
+
+  const fetchUserAllergens = async () => {
+    try {
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('allergies')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!error) {
+          const text = data?.allergies || '';
+          return parseAllergiesString(text);
+        }
+      }
+    } catch {}
+    try {
+      const saved = JSON.parse(localStorage.getItem('onboardingData') || 'null');
+      const text = saved?.allergies || '';
+      return parseAllergiesString(text);
+    } catch {
+      return [];
+    }
+  };
+
+  const parseAllergiesString = (text) => {
+    if (!text) return [];
+    const t = String(text).trim();
+    if (!t || t.toLowerCase() === 'none') return [];
+    return t.split(',').map((s) => normalizeAllergen(s)).filter(Boolean);
+  };
+
+  const matchAllergens = (userList, productList) => {
+    if (!Array.isArray(userList) || !Array.isArray(productList)) return [];
+    const matches = new Set();
+    userList.forEach((ua) => {
+      productList.forEach((pa) => {
+        if (!ua || !pa) return;
+        if (ua === pa || ua.includes(pa) || pa.includes(ua)) {
+          // Use product allergen token to display for clarity
+          matches.add(pa);
+        }
+      });
+    });
+    return Array.from(matches);
+  };
+
+  const dedupeWarnings = (arr) => {
+    const seen = new Set();
+    const result = [];
+    for (const w of arr) {
+      const key = String(w).toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(w);
+      }
+    }
+    return result;
   };
 
   const handleManualSubmit = async () => {
