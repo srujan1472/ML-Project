@@ -14,9 +14,17 @@ export default function ProtectedRoute({ children }) {
     if (loading) return;
 
     const performRedirects = async () => {
-      // Not authenticated -> go to unauthorized page
+      // Not authenticated -> redirect based on context
       if (!user) {
-        router.replace('/unauthorized');
+        let shouldGoLogin = false;
+        try {
+          const ts = Number(sessionStorage.getItem('recentLogout') || '0');
+          if (ts && Date.now() - ts < 30_000) {
+            shouldGoLogin = true;
+            sessionStorage.removeItem('recentLogout');
+          }
+        } catch {}
+        router.replace(shouldGoLogin ? '/login' : '/unauthorized');
         return;
       }
 

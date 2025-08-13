@@ -75,6 +75,7 @@ export default function AppShell({ children, title = 'Scanner App' }) {
 
   const handleLogout = async () => {
     try {
+      try { sessionStorage.setItem('recentLogout', String(Date.now())); } catch {}
       // Revoke and clear the current session
       await supabase.auth.signOut({ scope: 'global' });
 
