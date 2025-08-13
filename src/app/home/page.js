@@ -146,14 +146,17 @@ const NextjsScannerApp = () => {
       if (!analyzeResponse.ok) throw new Error(`Analysis error: ${analyzeResponse.status}`);
       const analysisResult = await analyzeResponse.json();
 
-      // Compute client-side allergen matches against user's saved allergies
+      // Compute client-side allergen matches against user's saved allergens
       const userAllergens = await fetchUserAllergens();
       const productAllergens = extractProductAllergens(productData);
+      const ingredientsTokens = extractProductIngredientsTokens(productData);
       const matchedAllergens = matchAllergens(userAllergens, productAllergens);
+      const matchedIngredients = matchAllergens(userAllergens, ingredientsTokens);
 
       const serverWarnings = Array.isArray(analysisResult.warnings) ? analysisResult.warnings : [];
       const allergenWarnings = matchedAllergens.map((a) => `Allergen alert: contains ${a}`);
-      const combined = dedupeWarnings([...serverWarnings, ...allergenWarnings]);
+      const ingredientWarnings = matchedIngredients.map((a) => `Allergen match in ingredients: ${a}`);
+      const combined = dedupeWarnings([...serverWarnings, ...allergenWarnings, ...ingredientWarnings]);
       if (combined.length > 0) setAnalysisWarnings(combined);
     } catch (error) {
       console.error('Error fetching product data:', error);
@@ -201,6 +204,71 @@ const NextjsScannerApp = () => {
         if (norm) results.add(norm);
       });
     }
+    return Array.from(results);
+  };
+
+  const extractProductIngredientsTokens = (product) => {
+    const results = new Set();
+    if (!product || typeof product !== 'object') return [];
+
+    // Collect potential ingredients sources
+    const textCandidates = [];
+    const maybePush = (v) => { if (v && typeof v === 'string') textCandidates.push(v); };
+    maybePush(product.ingredients_text);
+    maybePush(product.ingredients_text_en);
+    maybePush(product.ingredients_text_fr);
+    maybePush(product.ingredients_text_es);
+    maybePush(product.ingredients_text_de);
+    // Some APIs expose ingredients as a flat string under different keys
+    Object.keys(product).forEach((k) => {
+      try {
+        if (/^ingredients(_text)?(_[a-z]{2})?$/i.test(k) && typeof product[k] === 'string') {
+          textCandidates.push(product[k]);
+        }
+      } catch {}
+    });
+
+    // Ingredients array with objects or strings
+    if (Array.isArray(product.ingredients)) {
+      product.ingredients.forEach((ing) => {
+        if (!ing) return;
+        if (typeof ing === 'string') {
+          textCandidates.push(ing);
+          return;
+        }
+        if (typeof ing === 'object') {
+          const possible = ing.text || ing.id || ing.name || '';
+          if (possible) textCandidates.push(String(possible));
+        }
+      });
+    }
+
+    // Ingredients tags like 'en:milk'
+    if (Array.isArray(product.ingredients_tags)) {
+      product.ingredients_tags.forEach((tag) => {
+        const token = typeof tag === 'string' && tag.includes(':') ? tag.split(':').pop() : tag;
+        const norm = normalizeAllergen(token);
+        if (norm) results.add(norm);
+      });
+    }
+
+    // Tokenize collected texts
+    const pushTokens = (value) => {
+      if (!value) return;
+      const str = String(value);
+      // Split on common separators and strip punctuation
+      str
+        .split(/[,;()\[\]{}\n\r\t]/)
+        .map((s) => s.replace(/[.:*/\\"'`~!@#$%^&+=<>?-]/g, ' '))
+        .join(' ')
+        .split(/\s+/)
+        .forEach((part) => {
+          const norm = normalizeAllergen(part);
+          if (norm) results.add(norm);
+        });
+    };
+
+    textCandidates.forEach((t) => pushTokens(t));
     return Array.from(results);
   };
 
