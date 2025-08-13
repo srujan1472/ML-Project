@@ -142,26 +142,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-          <div className={styles.card}>
-            <h3 className={styles.cardTitle}>Contributors & Stats</h3>
-            <div className={styles.cardBody}>
-              <p className={styles.text}><span className={styles.labelInline}>Creator:</span> {product.creator || 'N/A'}</p>
-              <p className={styles.text}><span className={styles.labelInline}>Last Editor:</span> {product.last_editor || 'N/A'}</p>
-              <p className={styles.text}><span className={styles.labelInline}>Editors:</span> {(product.editors_tags || []).join(', ') || 'N/A'}</p>
-              <p className={styles.text}><span className={styles.labelInline}>Photographers:</span> {(product.photographers_tags || []).join(', ') || 'N/A'}</p>
-              <p className={styles.text}><span className={styles.labelInline}>Informers:</span> {(product.informers_tags || []).join(', ') || 'N/A'}</p>
-              <p className={styles.text}><span className={styles.labelInline}>Correctors:</span> {(product.correctors_tags || []).join(', ') || 'N/A'}</p>
-              <p className={styles.text}><span className={styles.labelInline}>Checkers:</span> {(product.checkers_tags || []).join(', ') || 'N/A'}</p>
-              <div className={styles.statsContainer}>
-                <p className={styles.text}>Completeness: {product.completeness ? `${(product.completeness * 100).toFixed(1)}%` : 'N/A'}</p>
-                <p className={styles.text}>Complete: {product.complete ? 'Yes' : 'No'}</p>
-                <p className={styles.text}>Scans: {product.scans_n || 'N/A'}</p>
-                <p className={styles.text}>Unique Scans: {product.unique_scans_n || 'N/A'}</p>
-                <p className={styles.text}>Popularity Key: {product.popularity_key || 'N/A'}</p>
-                <p className={styles.text}>Revision: {product.rev || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
+          {/* Contributors & Stats section removed as requested */}
 
           {warnings && warnings.length > 0 && (
             <div className={styles.card}>
