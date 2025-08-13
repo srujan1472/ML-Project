@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -9,34 +9,32 @@ export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
-    const maybeRedirect = async () => {
-      if (loading || hasRedirectedRef.current) return;
+    if (loading) return;
 
-      // Not authenticated -> go unauthorized quickly without extra session check
+    const performRedirects = async () => {
+      // Not authenticated -> navigate away promptly
       if (!user) {
-        hasRedirectedRef.current = true;
         router.replace('/unauthorized');
         return;
       }
 
-      // Authenticated: if onboarding not completed, redirect to onboarding (unless already there)
-      if (user && pathname !== '/home/onboarding') {
+      // Authenticated: ensure onboarding is completed
+      if (pathname !== '/home/onboarding') {
         const { data, error } = await supabase
           .from('profiles')
           .select('onboarding_completed')
           .eq('id', user.id)
           .maybeSingle();
         if (!error && (!data || data.onboarding_completed !== true)) {
-          hasRedirectedRef.current = true;
           router.replace('/home/onboarding');
           return;
         }
       }
     };
-    maybeRedirect();
+
+    performRedirects();
   }, [user, loading, router, pathname]);
 
   if (loading) {
