@@ -8,23 +8,23 @@
   "theme_color": "#111827",
   "icons": [
     {
-      "src": "/icons/logo.ico",
+      "src": "/icons/Icon-4.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/logo.ico",
+      "src": "/icons/Icon-5.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/icons/logo.ico",
+      "src": "/icons/Icon-6.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/logo.ico",
+      "src": "/icons/Icon-7.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
