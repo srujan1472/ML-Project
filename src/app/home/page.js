@@ -21,8 +21,6 @@ const NextjsScannerApp = () => {
   const [productError, setProductError] = useState(null);
   const [analysisWarnings, setAnalysisWarnings] = useState([]);
   const [manualBarcode, setManualBarcode] = useState('');
-  const [imageDecoding, setImageDecoding] = useState(false);
-  const fileInputRef = useRef(null);
 
   const canvasRef = useRef(null); // kept for layout
   const codeReaderRef = useRef(null);
@@ -64,21 +62,9 @@ const NextjsScannerApp = () => {
         target.appendChild(video);
       }
 
-      // Prefer back camera; fall back gracefully
-      const constraints = {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      };
-
-      const { BrowserMultiFormatReader, NotFoundException } = await import('@zxing/browser');
-      const reader = codeReaderRef.current;
-
-      controlsRef.current = await BrowserMultiFormatReader.decodeFromConstraints(
-        constraints,
+      // Start continuous decode on default/back camera
+      await codeReaderRef.current.decodeFromVideoDevice(
+        null,
         videoElRef.current,
         async (result, err) => {
           if (result) {
@@ -91,11 +77,8 @@ const NextjsScannerApp = () => {
               setBarcodeType(String(format));
               await processBarcodeData(text, String(format));
             } catch {}
-            return;
           }
-          if (err && !(err instanceof NotFoundException)) {
-            // Non-NotFound errors can be logged if needed
-          }
+          // ignore NotFound/empty frames
         }
       );
     } catch (error) {
@@ -110,9 +93,7 @@ const NextjsScannerApp = () => {
   const stopScanner = () => {
     return new Promise(async (resolve) => {
       try {
-        try { controlsRef.current?.stop?.(); } catch {}
-        controlsRef.current = null;
-        codeReaderRef.current = null;
+        try { codeReaderRef.current?.reset?.(); } catch {}
         if (videoElRef.current && videoElRef.current.srcObject) {
           try {
             const tracks = videoElRef.current.srcObject.getTracks?.() || [];
@@ -138,41 +119,7 @@ const NextjsScannerApp = () => {
     }, 250);
   };
 
-  const openImagePicker = () => {
-    try {
-      fileInputRef.current?.click();
-    } catch {}
-  };
-
-  const handleImageSelected = async (e) => {
-    const file = e?.target?.files?.[0];
-    if (!file) return;
-    setImageDecoding(true);
-    setProductError(null);
-    setScannedBarcode(null);
-    setBarcodeType(null);
-    try {
-      const { BrowserMultiFormatReader } = await import('@zxing/browser');
-      const reader = new BrowserMultiFormatReader();
-      const blobUrl = URL.createObjectURL(file);
-      try {
-        const result = await reader.decodeFromImageUrl(blobUrl);
-        const code = result.getText();
-        const format = result.getBarcodeFormat?.() || 'BARCODE';
-        setScannedBarcode(code);
-        setBarcodeType(String(format));
-        await processBarcodeData(code, String(format));
-      } finally {
-        try { URL.revokeObjectURL(blobUrl); } catch {}
-      }
-    } catch (err) {
-      console.error('Image decode error:', err);
-      alert('Could not read a barcode from the selected image. Try a clearer photo.');
-    } finally {
-      setImageDecoding(false);
-      try { if (fileInputRef.current) fileInputRef.current.value = ''; } catch {}
-    }
-  };
+  // Image picker was removed per request. Keeping placeholders to avoid unused var issues.
 
   const processBarcodeData = async (data, format) => {
     setProcessingBarcode(true);
@@ -381,22 +328,7 @@ const NextjsScannerApp = () => {
                 <Scan className="mr-2" size={18} />
                 {processingBarcode ? 'Processing...' : 'Open Scanner'}
               </button>
-              <div className="flex items-center gap-3 mb-6">
-                <button
-                  onClick={openImagePicker}
-                  disabled={imageDecoding}
-                  className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {imageDecoding ? 'Reading image...' : 'Upload Barcode Image'}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageSelected}
-                />
-              </div>
+              {/* Image picker removed */}
               <div className="mt-2">
                 <label className="block text-sm font-medium mb-1">Or enter barcode number</label>
                 <div className="flex items-center space-x-2">
