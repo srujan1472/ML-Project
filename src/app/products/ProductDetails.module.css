@@ -70,8 +70,8 @@
   .backButton { border-color: rgba(255,255,255,0.1); background: #1f2937; color: #e5e7eb; }
   .backButton:hover { background: #374151; }
   .header { color: #e5e7eb; }
-  .text { color: #cbd5e1; }
-  .label { color: #e5e7eb; }
+  .text { color: #e5e7eb; }
+  .label { color: #f3f4f6; }
 }
 
 .cardTitle {
@@ -99,9 +99,9 @@
 
 .text {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
   margin: 2px 0;
-  color: #334155;
+  color: #111827;
 }
 
 .labelInline { font-weight: 600; color: #0f172a; }
