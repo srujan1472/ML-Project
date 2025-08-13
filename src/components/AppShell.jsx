@@ -75,9 +75,26 @@ export default function AppShell({ children, title = 'Scanner App' }) {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Revoke and clear the current session
+      await supabase.auth.signOut({ scope: 'global' });
+
+      // Clear app-local data that might persist user context
+      try {
+        localStorage.removeItem('onboardingData');
+      } catch {}
+      try {
+        sessionStorage.removeItem('lastProduct');
+      } catch {}
+      try {
+        sessionStorage.removeItem('lastWarnings');
+      } catch {}
+
+      // Navigate to login and force a reload to ensure full state reset
       router.replace('/login');
       router.refresh();
+      setTimeout(() => {
+        if (typeof window !== 'undefined') window.location.reload();
+      }, 50);
     } catch (e) {
       console.error('Logout error', e);
     }

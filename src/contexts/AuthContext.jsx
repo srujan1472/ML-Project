@@ -37,13 +37,19 @@ export function AuthProvider({ children }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session) {
-          const { data: { user } } = await supabase.auth.getUser();
-          setUser(user);
-        } else {
-          setUser(null);
+        try {
+          if (session) {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+          } else {
+            setUser(null);
+            try { localStorage.removeItem('onboardingData'); } catch {}
+            try { sessionStorage.removeItem('lastProduct'); } catch {}
+            try { sessionStorage.removeItem('lastWarnings'); } catch {}
+          }
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 

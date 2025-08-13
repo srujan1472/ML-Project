@@ -15,15 +15,11 @@ export default function ProtectedRoute({ children }) {
     const maybeRedirect = async () => {
       if (loading || hasRedirectedRef.current) return;
 
-      // Not authenticated -> go unauthorized
+      // Not authenticated -> go unauthorized quickly without extra session check
       if (!user) {
-        // Double check session to avoid race
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData?.session) {
-          hasRedirectedRef.current = true;
-          router.replace('/unauthorized');
-          return;
-        }
+        hasRedirectedRef.current = true;
+        router.replace('/unauthorized');
+        return;
       }
 
       // Authenticated: if onboarding not completed, redirect to onboarding (unless already there)
