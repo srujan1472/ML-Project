@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 const NextjsScannerApp = () => {
   const [loading, setLoading] = useState(false);
@@ -20,10 +20,11 @@ const NextjsScannerApp = () => {
   const [productData, setProductData] = useState(null);
   const [productError, setProductError] = useState(null);
   const [analysisWarnings, setAnalysisWarnings] = useState([]);
+  const [manualBarcode, setManualBarcode] = useState('');
 
-  const videoRef = useRef(null);
   const canvasRef = useRef(null); // kept for layout
-  const codeReaderRef = useRef(null);
+  const scannerRef = useRef(null);
+  const readerIdRef = useRef(`scanner-${Math.random().toString(36).slice(2)}`);
   const isScanningRef = useRef(false);
 
   const router = useRouter();
@@ -38,45 +39,60 @@ const NextjsScannerApp = () => {
     setAnalysisWarnings([]);
 
     try {
-      const reader = new BrowserMultiFormatReader();
-      codeReaderRef.current = reader;
-      const videoEl = videoRef.current;
-
-      await reader.decodeFromVideoDevice(
-        undefined,
-        videoEl,
-        async (result, err, controls) => {
-          if (result) {
-            const text = result.getText();
-            const format = result.getBarcodeFormat();
-            setScannedBarcode(text);
-            setBarcodeType(format);
-            // Stop scanning while we process this code
-            controls.stop();
-            isScanningRef.current = false;
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode(readerIdRef.current);
+      }
+      const config = {
+        fps: 12,
+        qrbox: { width: 260, height: 160 },
+        aspectRatio: 1.7777778,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.ITF
+        ]
+      };
+      await scannerRef.current.start(
+        { facingMode: 'environment' },
+        config,
+        async (decodedText, decodedResult) => {
+          try {
+            setScannedBarcode(decodedText);
+            setBarcodeType(decodedResult?.result?.format?.formatName || 'BARCODE');
+            await stopScanner();
             setShowBarcodeScanner(false);
-            await processBarcodeData(text, format);
-          }
-          // ignore scanning errors; reader continues
-        }
+            await processBarcodeData(decodedText, decodedResult?.result?.format?.formatName || 'BARCODE');
+          } catch {}
+        },
+        () => {}
       );
     } catch (error) {
       console.error('Scanner init error:', error);
       alert('Failed to start barcode scanner');
       setShowBarcodeScanner(false);
       isScanningRef.current = false;
-      if (codeReaderRef.current) {
-        try { codeReaderRef.current.reset(); } catch {}
-      }
+      await stopScanner();
     }
   };
 
   const stopScanner = () => {
-    if (codeReaderRef.current) {
-      try { codeReaderRef.current.reset(); } catch {}
-      codeReaderRef.current = null;
-    }
-    isScanningRef.current = false;
+    return new Promise(async (resolve) => {
+      try {
+        if (scannerRef.current) {
+          try { await scannerRef.current.stop(); } catch {}
+          try { await scannerRef.current.clear(); } catch {}
+          scannerRef.current = null;
+        }
+      } finally {
+        isScanningRef.current = false;
+        resolve();
+      }
+    });
   };
 
   const handleOpenScanner = () => {
@@ -120,6 +136,14 @@ const NextjsScannerApp = () => {
     } finally {
       setProcessingBarcode(false);
     }
+  };
+
+  const handleManualSubmit = async () => {
+    const value = (manualBarcode || '').trim();
+    if (!value) return;
+    setScannedBarcode(value);
+    setBarcodeType('MANUAL');
+    await processBarcodeData(value, 'MANUAL');
   };
 
   const goToProductDetails = () => {
@@ -180,6 +204,28 @@ const NextjsScannerApp = () => {
                 <Scan className="mr-2" size={18} />
                 {processingBarcode ? 'Processing...' : 'Open Scanner'}
               </button>
+              <div className="mt-2">
+                <label className="block text-sm font-medium mb-1">Or enter barcode number</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={manualBarcode}
+                    onChange={(e) => setManualBarcode(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleManualSubmit(); }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 8901234567890"
+                  />
+                  <button
+                    onClick={handleManualSubmit}
+                    disabled={processingBarcode || !manualBarcode.trim()}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Search
+                  </button>
+                </div>
+              </div>
               {scannedBarcode && (
                 <div className="p-4 rounded-lg bg-gray-100 dark:bg-gray-700 mb-4">
                   <h3 className="font-semibold mb-2">Scanned Barcode:</h3>
@@ -261,7 +307,7 @@ const NextjsScannerApp = () => {
                   </button>
                 </div>
                 <div className="relative w-full" style={{ height: '300px' }}>
-                  <video ref={videoRef} className="w-full h-full object-cover" />
+                  <div id={readerIdRef.current} className="w-full h-full" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-48 h-48 border-2 border-white rounded-lg relative">
                       <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-green-500 rounded-tl-lg"></div>
