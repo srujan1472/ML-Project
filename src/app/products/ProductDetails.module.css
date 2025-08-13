@@ -24,10 +24,67 @@
   margin-bottom: 20px;
 }
 
+.hero {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 20px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.9);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .hero { background: rgba(31,41,55,0.85); border-color: rgba(255,255,255,0.08); }
+}
+
+.productImage {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.15);
+  background: #f1f5f9;
+}
+
+.imageFallback {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-weight: 600;
+}
+
 .actionsRow {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip {
+  background: #eef2f7;
+  color: #0f172a;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  .chip { background: #374151; color: #e5e7eb; border-color: rgba(255,255,255,0.08); }
+}
+.chipDanger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #991b1b;
+  border: 1px solid rgba(239,68,68,0.25);
+}
+@media (prefers-color-scheme: dark) {
+  .chipDanger { color: #fecaca; border-color: rgba(239,68,68,0.4); }
 }
 
 .backButton {
@@ -56,6 +113,14 @@
   gap: 24px;
 }
 
+.colSpan8 { grid-column: span 12; }
+.colSpan4 { grid-column: span 12; }
+
+@media (min-width: 1024px) {
+  .colSpan8 { grid-column: span 8; }
+  .colSpan4 { grid-column: span 4; }
+}
+
 .card {
   grid-column: span 12;
   border: 1px solid rgba(0,0,0,0.06);
@@ -80,6 +145,7 @@
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 
 .cardBody {
@@ -153,6 +219,8 @@
   margin-top: 8px; 
   border-left: 4px solid #ff0000; 
 } 
+
+.warningList { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .datesContainer { 
   background-color: rgba(100, 100, 100, 0.1); 

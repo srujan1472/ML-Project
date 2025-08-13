@@ -48,6 +48,11 @@ function ProductDetailsContent() {
 
   const basicName = product.product_name || product.product_name_en || product.product_name_hi || 'Unknown Product';
   const productId = product._id || product.id || product.code || 'N/A';
+  const productImage = product.image_front_small_url || product.image_small_url || product.image_url || '';
+  const brandChips = (product.brands_tags || (product.brands ? String(product.brands).split(',').map((b) => b.trim()) : [])).slice(0, 6);
+  const allergenChips = (product.allergens_tags || [])
+    .map(formatTag)
+    .slice(0, 6);
 
   return (
     <div className={styles.container}>
@@ -61,8 +66,27 @@ function ProductDetailsContent() {
             </div>
           </div>
 
+          {/* Hero section with image and quick chips */}
+          <div className={styles.hero}>
+            {productImage ? (
+              <img src={productImage} alt={basicName} className={styles.productImage} />
+            ) : (
+              <div className={styles.imageFallback}>No Image</div>
+            )}
+            <div>
+              <div className={styles.chips}>
+                {brandChips.map((b) => (
+                  <span key={`b-${b}`} className={styles.chip}>{b}</span>
+                ))}
+                {allergenChips.map((a) => (
+                  <span key={`a-${a}`} className={`${styles.chip} ${styles.chipDanger}`}>{a}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className={styles.sectionGrid}>
-          <div className={styles.card}>
+            <div className={`${styles.card} ${styles.colSpan8}`}>
             <h3 className={styles.cardTitle}>Overview</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Product ID:</span> {productId}</p>
@@ -73,7 +97,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-            <div className={styles.card}>
+            <div className={`${styles.card} ${styles.colSpan4}`}>
             <h3 className={styles.cardTitle}>Ingredients & Allergens</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Ingredients:</span> {product.ingredients_text || product.ingredients_text_debug || 'Not available'}</p>
@@ -85,7 +109,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-            <div className={styles.card}>
+            <div className={`${styles.card} ${styles.colSpan8}`}>
             <h3 className={styles.cardTitle}>Nutriments</h3>
             <div className={styles.cardBody}>
               {nutrimentEntries.length > 0 ? (
@@ -100,7 +124,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-            <div className={styles.card}>
+            <div className={`${styles.card} ${styles.colSpan4}`}>
             <h3 className={styles.cardTitle}>Scores</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Nutri-Score Grade:</span> {product.nutriscore_grade?.toUpperCase() || product.nutrition_grade_fr?.toUpperCase() || 'Unknown'}</p>
@@ -111,7 +135,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-            <div className={styles.card}>
+            <div className={`${styles.card} ${styles.colSpan6}`}>
             <h3 className={styles.cardTitle}>Packaging</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Packaging:</span> {product.packaging || (product.packagings && product.packagings.length > 0 ? JSON.stringify(product.packagings, null, 2) : 'N/A')}</p>
@@ -121,7 +145,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-            <div className={styles.card}>
+            <div className={`${styles.card} ${styles.colSpan6}`}>
             <h3 className={styles.cardTitle}>Meta</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Labels:</span> {(product.labels_tags || []).map(formatTag).join(', ') || 'N/A'}</p>
@@ -147,11 +171,11 @@ function ProductDetailsContent() {
             {warnings && warnings.length > 0 && (
             <div className={styles.card}>
               <h3 className={styles.cardTitle}>Health & Safety Warnings</h3>
-              <div className={styles.cardBody}>
-                {warnings.map((w, i) => (
-                  <p key={`custom-${i}`} className={`${styles.text} ${styles.warning}`}>⚠️ {w}</p>
-                ))}
-              </div>
+                <div className={`${styles.cardBody} ${styles.warningList}`}>
+                  {warnings.map((w, i) => (
+                    <span key={`custom-${i}`} className={`${styles.chip} ${styles.chipDanger}`}>⚠️ {w}</span>
+                  ))}
+                </div>
             </div>
           )}
 
