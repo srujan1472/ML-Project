@@ -23,8 +23,9 @@ const NextjsScannerApp = () => {
   const [manualBarcode, setManualBarcode] = useState('');
 
   const canvasRef = useRef(null); // kept for layout
-  const quaggaRef = useRef(null);
-  const onDetectedRef = useRef(null);
+  const codeReaderRef = useRef(null);
+  const controlsRef = useRef(null);
+  const videoElRef = useRef(null);
   const readerIdRef = useRef(`scanner-${Math.random().toString(36).slice(2)}`);
   const isScanningRef = useRef(false);
 
@@ -40,57 +41,61 @@ const NextjsScannerApp = () => {
     setAnalysisWarnings([]);
 
     try {
-      if (!quaggaRef.current) {
-        const mod = await import('@ericblade/quagga2');
-        quaggaRef.current = mod.default || mod;
+      if (!codeReaderRef.current) {
+        const mods = await import('@zxing/browser');
+        codeReaderRef.current = new mods.BrowserMultiFormatReader();
       }
+
       const target = document.getElementById(readerIdRef.current);
       if (!target) throw new Error('Scanner target not found');
 
-      const config = {
-        inputStream: {
-          name: 'Live',
-          type: 'LiveStream',
-          target,
-          constraints: { facingMode: 'environment' }
+      // Create or reuse a video element in the target container
+      if (!videoElRef.current) {
+        const video = document.createElement('video');
+        video.setAttribute('autoplay', 'true');
+        video.setAttribute('muted', 'true');
+        video.setAttribute('playsinline', 'true');
+        video.style.width = '100%';
+        video.style.height = '100%';
+        videoElRef.current = video;
+        target.innerHTML = '';
+        target.appendChild(video);
+      }
+
+      // Prefer back camera; fall back gracefully
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
-        locator: { patchSize: 'medium', halfSample: true },
-        numOfWorkers: typeof window !== 'undefined' ? (navigator.hardwareConcurrency || 2) : 2,
-        frequency: 10,
-        decoder: {
-          readers: [
-            'ean_reader',
-            'ean_8_reader',
-            'code_128_reader',
-            'code_39_reader',
-            'upc_reader',
-            'upc_e_reader',
-            'itf_reader'
-          ]
-        },
-        locate: true,
+        audio: false,
       };
 
-      await new Promise((resolve, reject) => {
-        quaggaRef.current.init(config, (err) => (err ? reject(err) : resolve()));
-      });
+      const { BrowserMultiFormatReader, NotFoundException } = await import('@zxing/browser');
+      const reader = codeReaderRef.current;
 
-      onDetectedRef.current = async (result) => {
-        try {
-          const code = result?.codeResult?.code;
-          const format = result?.codeResult?.format || 'BARCODE';
-          if (!code) return;
-          try { quaggaRef.current?.offDetected(onDetectedRef.current); } catch {}
-          await stopScanner();
-          setShowBarcodeScanner(false);
-          setScannedBarcode(code);
-          setBarcodeType(format);
-          await processBarcodeData(code, format);
-        } catch {}
-      };
-
-      quaggaRef.current.onDetected(onDetectedRef.current);
-      quaggaRef.current.start();
+      controlsRef.current = await BrowserMultiFormatReader.decodeFromConstraints(
+        constraints,
+        videoElRef.current,
+        async (result, err) => {
+          if (result) {
+            const text = result.getText();
+            const format = result.getBarcodeFormat?.() || 'BARCODE';
+            try {
+              await stopScanner();
+              setShowBarcodeScanner(false);
+              setScannedBarcode(text);
+              setBarcodeType(String(format));
+              await processBarcodeData(text, String(format));
+            } catch {}
+            return;
+          }
+          if (err && !(err instanceof NotFoundException)) {
+            // Non-NotFound errors can be logged if needed
+          }
+        }
+      );
     } catch (error) {
       console.error('Scanner init error:', error);
       alert('Failed to start barcode scanner');
@@ -103,10 +108,18 @@ const NextjsScannerApp = () => {
   const stopScanner = () => {
     return new Promise(async (resolve) => {
       try {
-        if (quaggaRef.current) {
-          try { if (onDetectedRef.current) quaggaRef.current.offDetected(onDetectedRef.current); } catch {}
-          try { quaggaRef.current.stop(); } catch {}
-          try { quaggaRef.current.detach(); } catch {}
+        try { controlsRef.current?.stop?.(); } catch {}
+        controlsRef.current = null;
+        codeReaderRef.current = null;
+        if (videoElRef.current && videoElRef.current.srcObject) {
+          try {
+            const tracks = videoElRef.current.srcObject.getTracks?.() || [];
+            tracks.forEach((t) => t.stop());
+          } catch {}
+        }
+        if (videoElRef.current) {
+          try { videoElRef.current.remove(); } catch {}
+          videoElRef.current = null;
         }
       } finally {
         isScanningRef.current = false;
