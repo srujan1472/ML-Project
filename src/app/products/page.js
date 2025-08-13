@@ -51,17 +51,17 @@ function ProductDetailsContent() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.scroll}>
-        <div className={styles.headerRow}>
-          <h1 className={styles.header}>{basicName}</h1>
-          <div className={styles.actionsRow}>
-            <button className={styles.backButton} onClick={() => router.back()}>
-              ← Back
-            </button>
+        <div className={styles.scroll}>
+          <div className={styles.headerRow}>
+            <h1 className={styles.header}>{basicName}</h1>
+            <div className={styles.actionsRow}>
+              <button className={styles.backButton} onClick={() => router.back()}>
+                ← Back
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className={styles.sectionGrid}>
+          <div className={styles.sectionGrid}>
           <div className={styles.card}>
             <h3 className={styles.cardTitle}>Overview</h3>
             <div className={styles.cardBody}>
@@ -73,7 +73,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-          <div className={styles.card}>
+            <div className={styles.card}>
             <h3 className={styles.cardTitle}>Ingredients & Allergens</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Ingredients:</span> {product.ingredients_text || product.ingredients_text_debug || 'Not available'}</p>
@@ -85,7 +85,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-          <div className={styles.card}>
+            <div className={styles.card}>
             <h3 className={styles.cardTitle}>Nutriments</h3>
             <div className={styles.cardBody}>
               {nutrimentEntries.length > 0 ? (
@@ -100,7 +100,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-          <div className={styles.card}>
+            <div className={styles.card}>
             <h3 className={styles.cardTitle}>Scores</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Nutri-Score Grade:</span> {product.nutriscore_grade?.toUpperCase() || product.nutrition_grade_fr?.toUpperCase() || 'Unknown'}</p>
@@ -111,7 +111,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-          <div className={styles.card}>
+            <div className={styles.card}>
             <h3 className={styles.cardTitle}>Packaging</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Packaging:</span> {product.packaging || (product.packagings && product.packagings.length > 0 ? JSON.stringify(product.packagings, null, 2) : 'N/A')}</p>
@@ -121,7 +121,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-          <div className={styles.card}>
+            <div className={styles.card}>
             <h3 className={styles.cardTitle}>Meta</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Labels:</span> {(product.labels_tags || []).map(formatTag).join(', ') || 'N/A'}</p>
@@ -132,7 +132,7 @@ function ProductDetailsContent() {
             </div>
           </div>
 
-          <div className={styles.card}>
+            <div className={styles.card}>
             <h3 className={styles.cardTitle}>Dates</h3>
             <div className={styles.cardBody}>
               <p className={styles.text}><span className={styles.labelInline}>Created:</span> {product.created_t ? new Date(product.created_t * 1000).toLocaleDateString() : 'N/A'}</p>
@@ -144,7 +144,7 @@ function ProductDetailsContent() {
 
           {/* Contributors & Stats section removed as requested */}
 
-          {warnings && warnings.length > 0 && (
+            {warnings && warnings.length > 0 && (
             <div className={styles.card}>
               <h3 className={styles.cardTitle}>Health & Safety Warnings</h3>
               <div className={styles.cardBody}>
