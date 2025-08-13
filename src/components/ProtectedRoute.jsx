@@ -14,9 +14,9 @@ export default function ProtectedRoute({ children }) {
     if (loading) return;
 
     const performRedirects = async () => {
-      // Not authenticated -> go to login
+      // Not authenticated -> go to unauthorized page
       if (!user) {
-        router.replace('/login');
+        router.replace('/unauthorized');
         return;
       }
 
