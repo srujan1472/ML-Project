@@ -7,7 +7,6 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/AppShell';
 import { supabase } from '@/lib/supabaseClient';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 const NextjsScannerApp = () => {
   const [loading, setLoading] = useState(false);
@@ -24,7 +23,8 @@ const NextjsScannerApp = () => {
   const [manualBarcode, setManualBarcode] = useState('');
 
   const canvasRef = useRef(null); // kept for layout
-  const scannerRef = useRef(null);
+  const quaggaRef = useRef(null);
+  const onDetectedRef = useRef(null);
   const readerIdRef = useRef(`scanner-${Math.random().toString(36).slice(2)}`);
   const isScanningRef = useRef(false);
 
@@ -40,38 +40,57 @@ const NextjsScannerApp = () => {
     setAnalysisWarnings([]);
 
     try {
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(readerIdRef.current);
+      if (!quaggaRef.current) {
+        const mod = await import('@ericblade/quagga2');
+        quaggaRef.current = mod.default || mod;
       }
+      const target = document.getElementById(readerIdRef.current);
+      if (!target) throw new Error('Scanner target not found');
+
       const config = {
-        fps: 12,
-        qrbox: { width: 260, height: 160 },
-        aspectRatio: 1.7777778,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-          Html5QrcodeSupportedFormats.ITF
-        ]
-      };
-      await scannerRef.current.start(
-        { facingMode: 'environment' },
-        config,
-        async (decodedText, decodedResult) => {
-          try {
-            setScannedBarcode(decodedText);
-            setBarcodeType(decodedResult?.result?.format?.formatName || 'BARCODE');
-            await stopScanner();
-            setShowBarcodeScanner(false);
-            await processBarcodeData(decodedText, decodedResult?.result?.format?.formatName || 'BARCODE');
-          } catch {}
+        inputStream: {
+          name: 'Live',
+          type: 'LiveStream',
+          target,
+          constraints: { facingMode: 'environment' }
         },
-        () => {}
-      );
+        locator: { patchSize: 'medium', halfSample: true },
+        numOfWorkers: typeof window !== 'undefined' ? (navigator.hardwareConcurrency || 2) : 2,
+        frequency: 10,
+        decoder: {
+          readers: [
+            'ean_reader',
+            'ean_8_reader',
+            'code_128_reader',
+            'code_39_reader',
+            'upc_reader',
+            'upc_e_reader',
+            'itf_reader'
+          ]
+        },
+        locate: true,
+      };
+
+      await new Promise((resolve, reject) => {
+        quaggaRef.current.init(config, (err) => (err ? reject(err) : resolve()));
+      });
+
+      onDetectedRef.current = async (result) => {
+        try {
+          const code = result?.codeResult?.code;
+          const format = result?.codeResult?.format || 'BARCODE';
+          if (!code) return;
+          try { quaggaRef.current?.offDetected(onDetectedRef.current); } catch {}
+          await stopScanner();
+          setShowBarcodeScanner(false);
+          setScannedBarcode(code);
+          setBarcodeType(format);
+          await processBarcodeData(code, format);
+        } catch {}
+      };
+
+      quaggaRef.current.onDetected(onDetectedRef.current);
+      quaggaRef.current.start();
     } catch (error) {
       console.error('Scanner init error:', error);
       alert('Failed to start barcode scanner');
@@ -84,10 +103,10 @@ const NextjsScannerApp = () => {
   const stopScanner = () => {
     return new Promise(async (resolve) => {
       try {
-        if (scannerRef.current) {
-          try { await scannerRef.current.stop(); } catch {}
-          try { await scannerRef.current.clear(); } catch {}
-          scannerRef.current = null;
+        if (quaggaRef.current) {
+          try { if (onDetectedRef.current) quaggaRef.current.offDetected(onDetectedRef.current); } catch {}
+          try { quaggaRef.current.stop(); } catch {}
+          try { quaggaRef.current.detach(); } catch {}
         }
       } finally {
         isScanningRef.current = false;
