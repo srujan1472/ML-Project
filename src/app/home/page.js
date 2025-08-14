@@ -1,5 +1,4 @@
 "use client"
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Scan, X, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +11,6 @@ const NextjsScannerApp = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const userName = user?.user_metadata?.full_name || 'User';
-
   const [scannedBarcode, setScannedBarcode] = useState(null);
   const [barcodeType, setBarcodeType] = useState(null);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
@@ -21,14 +19,12 @@ const NextjsScannerApp = () => {
   const [productError, setProductError] = useState(null);
   const [analysisWarnings, setAnalysisWarnings] = useState([]);
   const [manualBarcode, setManualBarcode] = useState('');
-
-  const canvasRef = useRef(null); // kept for layout
+  const canvasRef = useRef(null);
   const codeReaderRef = useRef(null);
   const controlsRef = useRef(null);
   const videoElRef = useRef(null);
   const readerIdRef = useRef(`scanner-${Math.random().toString(36).slice(2)}`);
   const isScanningRef = useRef(false);
-
   const router = useRouter();
 
   const startScanner = async () => {
@@ -39,17 +35,14 @@ const NextjsScannerApp = () => {
     setProductData(null);
     setProductError(null);
     setAnalysisWarnings([]);
-
     try {
       if (!codeReaderRef.current) {
         const mods = await import('@zxing/browser');
         codeReaderRef.current = new mods.BrowserMultiFormatReader();
       }
-
       const target = document.getElementById(readerIdRef.current);
       if (!target) throw new Error('Scanner target not found');
-
-      // Create or reuse a video element in the target container
+      
       if (!videoElRef.current) {
         const video = document.createElement('video');
         video.setAttribute('autoplay', 'true');
@@ -61,8 +54,7 @@ const NextjsScannerApp = () => {
         target.innerHTML = '';
         target.appendChild(video);
       }
-
-      // Start continuous decode on default/back camera
+      
       await codeReaderRef.current.decodeFromVideoDevice(
         null,
         videoElRef.current,
@@ -78,7 +70,6 @@ const NextjsScannerApp = () => {
               await processBarcodeData(text, String(format));
             } catch {}
           }
-          // ignore NotFound/empty frames
         }
       );
     } catch (error) {
@@ -113,13 +104,10 @@ const NextjsScannerApp = () => {
 
   const handleOpenScanner = () => {
     setShowBarcodeScanner(true);
-    // give modal time to mount video element
     setTimeout(() => {
       startScanner();
     }, 250);
   };
-
-  // Image picker was removed per request. Keeping placeholders to avoid unused var issues.
 
   const processBarcodeData = async (data, format) => {
     setProcessingBarcode(true);
@@ -135,6 +123,7 @@ const NextjsScannerApp = () => {
       }
       const productData = await response.json();
       setProductData(productData);
+      
       const analyzeResponse = await fetch('https://testdeploy-kgh0.onrender.com/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,20 +132,21 @@ const NextjsScannerApp = () => {
           profile: { id: 'user123', allergies: [], diseases: [] }
         }),
       });
+      
       if (!analyzeResponse.ok) throw new Error(`Analysis error: ${analyzeResponse.status}`);
       const analysisResult = await analyzeResponse.json();
-
-      // Compute client-side allergen matches against user's saved allergens
+      
       const userAllergens = await fetchUserAllergens();
       const productAllergens = extractProductAllergens(productData);
       const ingredientsTokens = extractProductIngredientsTokens(productData);
       const matchedAllergens = matchAllergens(userAllergens, productAllergens);
       const matchedIngredients = matchAllergens(userAllergens, ingredientsTokens);
-
+      
       const serverWarnings = Array.isArray(analysisResult.warnings) ? analysisResult.warnings : [];
       const allergenWarnings = matchedAllergens.map((a) => `Allergen alert: contains ${a}`);
       const ingredientWarnings = matchedIngredients.map((a) => `Allergen match in ingredients: ${a}`);
       const combined = dedupeWarnings([...serverWarnings, ...allergenWarnings, ...ingredientWarnings]);
+      
       if (combined.length > 0) setAnalysisWarnings(combined);
     } catch (error) {
       console.error('Error fetching product data:', error);
@@ -180,6 +170,7 @@ const NextjsScannerApp = () => {
   const extractProductAllergens = (product) => {
     const results = new Set();
     if (!product || typeof product !== 'object') return [];
+    
     const pushTokens = (value) => {
       if (!value) return;
       if (Array.isArray(value)) {
@@ -187,16 +178,17 @@ const NextjsScannerApp = () => {
         return;
       }
       const str = String(value);
-      // Split by comma/semicolon and also handle tag format like 'en:milk'
       str.split(/[;,]/).forEach((part) => {
         const token = part.includes(':') ? part.split(':').pop() : part;
         const norm = normalizeAllergen(token);
         if (norm) results.add(norm);
       });
     };
+    
     pushTokens(product.allergens);
     pushTokens(product.allergens_from_user);
     pushTokens(product.allergens_from_ingredients);
+    
     if (Array.isArray(product.allergens_tags)) {
       product.allergens_tags.forEach((tag) => {
         const token = typeof tag === 'string' && tag.includes(':') ? tag.split(':').pop() : tag;
@@ -204,22 +196,23 @@ const NextjsScannerApp = () => {
         if (norm) results.add(norm);
       });
     }
+    
     return Array.from(results);
   };
 
   const extractProductIngredientsTokens = (product) => {
     const results = new Set();
     if (!product || typeof product !== 'object') return [];
-
-    // Collect potential ingredients sources
+    
     const textCandidates = [];
     const maybePush = (v) => { if (v && typeof v === 'string') textCandidates.push(v); };
+    
     maybePush(product.ingredients_text);
     maybePush(product.ingredients_text_en);
     maybePush(product.ingredients_text_fr);
     maybePush(product.ingredients_text_es);
     maybePush(product.ingredients_text_de);
-    // Some APIs expose ingredients as a flat string under different keys
+    
     Object.keys(product).forEach((k) => {
       try {
         if (/^ingredients(_text)?(_[a-z]{2})?$/i.test(k) && typeof product[k] === 'string') {
@@ -227,8 +220,7 @@ const NextjsScannerApp = () => {
         }
       } catch {}
     });
-
-    // Ingredients array with objects or strings
+    
     if (Array.isArray(product.ingredients)) {
       product.ingredients.forEach((ing) => {
         if (!ing) return;
@@ -242,8 +234,7 @@ const NextjsScannerApp = () => {
         }
       });
     }
-
-    // Ingredients tags like 'en:milk'
+    
     if (Array.isArray(product.ingredients_tags)) {
       product.ingredients_tags.forEach((tag) => {
         const token = typeof tag === 'string' && tag.includes(':') ? tag.split(':').pop() : tag;
@@ -251,12 +242,10 @@ const NextjsScannerApp = () => {
         if (norm) results.add(norm);
       });
     }
-
-    // Tokenize collected texts
+    
     const pushTokens = (value) => {
       if (!value) return;
       const str = String(value);
-      // Split on common separators and strip punctuation
       str
         .split(/[,;()\[\]{}\n\r\t]/)
         .map((s) => s.replace(/[.:*/\\"'`~!@#$%^&+=<>?-]/g, ' '))
@@ -267,7 +256,7 @@ const NextjsScannerApp = () => {
           if (norm) results.add(norm);
         });
     };
-
+    
     textCandidates.forEach((t) => pushTokens(t));
     return Array.from(results);
   };
@@ -286,6 +275,7 @@ const NextjsScannerApp = () => {
         }
       }
     } catch {}
+    
     try {
       const saved = JSON.parse(localStorage.getItem('onboardingData') || 'null');
       const text = saved?.allergies || '';
@@ -309,7 +299,6 @@ const NextjsScannerApp = () => {
       productList.forEach((pa) => {
         if (!ua || !pa) return;
         if (ua === pa || ua.includes(pa) || pa.includes(ua)) {
-          // Use product allergen token to display for clarity
           matches.add(pa);
         }
       });
@@ -367,7 +356,7 @@ const NextjsScannerApp = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
       </div>
     );
@@ -376,141 +365,226 @@ const NextjsScannerApp = () => {
   return (
     <ProtectedRoute>
       <AppShell title="Scanner App">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-2">Welcome, {userName}!</h2>
-            <p className="opacity-75">Scan product barcodes to get detailed nutritional information and health analysis.</p>
-          </div>
-          <div className="space-y-8">
-            <div className="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-lg">
-              <div className="flex items-center mb-4">
-                <Scan className="mr-2 text-green-500" size={20} />
-                <h3 className="text-lg font-semibold">Barcode Scanner</h3>
-              </div>
-              <p className="mb-4">Open the camera and place the barcode inside the frame. Detection starts automatically.</p>
-              <button
-                onClick={handleOpenScanner}
-                disabled={processingBarcode}
-                className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors mb-6 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                <Scan className="mr-2" size={18} />
-                {processingBarcode ? 'Processing...' : 'Open Scanner'}
-              </button>
-              {/* Image picker removed */}
-              <div className="mt-2">
-                <label className="block text-sm font-medium mb-1">Or enter barcode number</label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={manualBarcode}
-                    onChange={(e) => setManualBarcode(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleManualSubmit(); }}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g. 8901234567890"
-                  />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4">
+          <div className="max-w-4xl mx-auto">
+            {/* Welcome Section */}
+            <div className="mb-12 text-center">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                Welcome, <span className="text-blue-600 dark:text-blue-400">{userName}</span>!
+              </h1>
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Scan product barcodes to get detailed nutritional information and personalized health analysis.
+              </p>
+            </div>
+
+            {/* Scanner Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-10 transition-all duration-300 hover:shadow-2xl">
+              <div className="p-6 md:p-8">
+                <div className="flex items-center mb-6">
+                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg mr-4">
+                    <Scan className="text-green-600 dark:text-green-400" size={24} />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Barcode Scanner</h3>
+                </div>
+                
+                <p className="text-gray-600 dark:text-gray-300 mb-8">
+                  Open the camera and place the barcode inside the frame. Detection starts automatically.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 mb-8">
                   <button
-                    onClick={handleManualSubmit}
-                    disabled={processingBarcode || !manualBarcode.trim()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    onClick={handleOpenScanner}
+                    disabled={processingBarcode}
+                    className="flex-1 flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    Search
+                    <Scan className="mr-2" size={20} />
+                    {processingBarcode ? 'Processing...' : 'Open Scanner'}
                   </button>
                 </div>
+                
+                {/* Manual Barcode Input */}
+                <div className="mt-8">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Or enter barcode number manually
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={manualBarcode}
+                      onChange={(e) => setManualBarcode(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleManualSubmit(); }}
+                      className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
+                      placeholder="e.g. 8901234567890"
+                    />
+                    <button
+                      onClick={handleManualSubmit}
+                      disabled={processingBarcode || !manualBarcode.trim()}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      Search
+                    </button>
+                  </div>
+                </div>
               </div>
-              {scannedBarcode && (
-                <div className="p-4 rounded-lg bg-gray-100 dark:bg-gray-700 mb-4">
-                  <h3 className="font-semibold mb-2">Scanned Barcode:</h3>
-                  <p className="text-sm mb-2">Type: {barcodeType}</p>
-                  <p className="text-sm mb-4 font-mono bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{scannedBarcode}</p>
+            </div>
+
+            {/* Results Section */}
+            {scannedBarcode && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-10">
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Scan Results</h3>
+                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm font-medium">
+                      {barcodeType}
+                    </span>
+                  </div>
+                  
+                  <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Scanned Barcode</p>
+                    <p className="font-mono text-lg text-gray-900 dark:text-white break-all">{scannedBarcode}</p>
+                  </div>
+                  
                   {processingBarcode && (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
-                      <span>Fetching product information...</span>
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                      <span className="text-gray-600 dark:text-gray-300">Fetching product information...</span>
                     </div>
                   )}
+                  
                   {productData && (
-                    <div className="p-4 rounded-lg bg-gray-200 dark:bg-gray-600 mb-4">
-                      <h4 className="font-semibold mb-3 flex items-center">
-                        <CheckCircle className="text-green-500 mr-2" size={18} />
-                        Product Information
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p><span className="font-medium">Name:</span> {productData.product_name || 'N/A'}</p>
-                          <p><span className="font-medium">Brand:</span> {productData.brands || 'N/A'}</p>
-                          <p><span className="font-medium">Quantity:</span> {productData.quantity || 'N/A'}</p>
-                          <p><span className="font-medium">Categories:</span> {Array.isArray(productData.categories) ? productData.categories.join(', ') : productData.categories || 'N/A'}</p>
+                    <div className="mb-8">
+                      <div className="flex items-center mb-6">
+                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mr-3">
+                          <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
                         </div>
-                        <div>
-                          {productData.nutriments && (
-                            <>
-                              <p><span className="font-medium">Energy:</span> {productData.nutriments.energy_100g || 'N/A'} kJ</p>
-                              <p><span className="font-medium">Fat:</span> {productData.nutriments.fat_100g || 'N/A'} g</p>
-                              <p><span className="font-medium">Carbs:</span> {productData.nutriments.carbohydrates_100g || 'N/A'} g</p>
-                              <p><span className="font-medium">Protein:</span> {productData.nutriments.proteins_100g || 'N/A'} g</p>
-                            </>
-                          )}
-                        </div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Product Information</h4>
                       </div>
-                      <button onClick={goToProductDetails} className="mt-4 inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">View full details</button>
-                    </div>
-                  )}
-                  {analysisWarnings && analysisWarnings.length > 0 && (
-                    <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 mb-4">
-                      <h4 className="font-semibold mb-3 flex items-center text-yellow-800 dark:text-yellow-200">
-                        <AlertTriangle className="text-yellow-600 mr-2" size={18} />
-                        Health Analysis
-                      </h4>
-                      <div className="space-y-2">
-                        {analysisWarnings.map((warning, index) => (
-                          <div key={index} className="flex items-start space-x-2 text-sm">
-                            {getWarningIcon(warning)}
-                            <span className="text-gray-700 dark:text-gray-300">{warning}</span>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Product Name</p>
+                            <p className="font-medium text-gray-900 dark:text-white">{productData.product_name || 'N/A'}</p>
                           </div>
-                        ))}
+                          <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Brand</p>
+                            <p className="font-medium text-gray-900 dark:text-white">{productData.brands || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Quantity</p>
+                            <p className="font-medium text-gray-900 dark:text-white">{productData.quantity || 'N/A'}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Categories</p>
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {Array.isArray(productData.categories) ? productData.categories.join(', ') : productData.categories || 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nutrition</p>
+                            <div className="text-sm text-gray-900 dark:text-white space-y-1">
+                              {productData.nutriments && (
+                                <>
+                                  <p>Energy: {productData.nutriments.energy_100g || 'N/A'} kJ</p>
+                                  <p>Fat: {productData.nutriments.fat_100g || 'N/A'} g</p>
+                                  <p>Carbs: {productData.nutriments.carbohydrates_100g || 'N/A'} g</p>
+                                  <p>Protein: {productData.nutriments.proteins_100g || 'N/A'} g</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={goToProductDetails} 
+                        className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                      >
+                        View Full Details
+                      </button>
+                    </div>
+                  )}
+                  
+                  {analysisWarnings && analysisWarnings.length > 0 && (
+                    <div className="mb-8">
+                      <div className="flex items-center mb-4">
+                        <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg mr-3">
+                          <AlertTriangle className="text-yellow-600 dark:text-yellow-400" size={20} />
+                        </div>
+                        <h4 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">Health Analysis</h4>
+                      </div>
+                      
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-5">
+                        <div className="space-y-3">
+                          {analysisWarnings.map((warning, index) => (
+                            <div key={index} className="flex items-start space-x-3">
+                              <div className="mt-0.5">
+                                {getWarningIcon(warning)}
+                              </div>
+                              <span className="text-gray-700 dark:text-gray-300">{warning}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
+                  
                   {productError && (
-                    <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 mb-4">
-                      <div className="flex items-center">
-                        <AlertTriangle className="text-red-500 mr-2" size={18} />
-                        <span className="text-red-700 dark:text-red-300 font-medium">Error</span>
+                    <div>
+                      <div className="flex items-center mb-4">
+                        <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg mr-3">
+                          <AlertTriangle className="text-red-600 dark:text-red-400" size={20} />
+                        </div>
+                        <h4 className="text-lg font-semibold text-red-800 dark:text-red-200">Error</h4>
                       </div>
-                      <p className="text-red-600 dark:text-red-400 text-sm mt-1">{productError}</p>
+                      
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-5">
+                        <p className="text-red-700 dark:text-red-300">{productError}</p>
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Scanner Modal */}
         {showBarcodeScanner && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={"bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl max-w-md w-full mx-4"}>
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-2xl max-w-md w-full">
               <div className="relative">
-                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Barcode Scanner</h3>
-                  <button onClick={() => { setShowBarcodeScanner(false); stopScanner(); }} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
+                <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Barcode Scanner</h3>
+                  <button 
+                    onClick={() => { setShowBarcodeScanner(false); stopScanner(); }} 
+                    className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+                  >
                     <X size={20} />
                   </button>
                 </div>
-                <div className="relative w-full" style={{ height: '300px' }}>
-                  <div id={readerIdRef.current} className="w-full h-full" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-48 h-48 border-2 border-white rounded-lg relative">
-                      <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-green-500 rounded-tl-lg"></div>
-                      <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-green-500 rounded-tr-lg"></div>
-                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-green-500 rounded-bl-lg"></div>
-                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-green-500 rounded-br-lg"></div>
+                
+                <div className="relative w-full" style={{ height: '350px' }}>
+                  <div id={readerIdRef.current} className="w-full h-full bg-black" />
+                  
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-56 h-56 border-2 border-white rounded-lg relative">
+                      <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-green-500 rounded-tl-lg"></div>
+                      <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-green-500 rounded-tr-lg"></div>
+                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-green-500 rounded-bl-lg"></div>
+                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-green-500 rounded-br-lg"></div>
                     </div>
                   </div>
-                  <div className="absolute bottom-4 left-4 right-4 text-center">
-                    <p className="text-white text-sm bg-black bg-opacity-50 px-3 py-2 rounded-lg">Place the barcode within the frame to auto-scan</p>
+                  
+                  <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+                    <p className="text-white text-sm bg-black bg-opacity-70 px-4 py-2 rounded-full">
+                      Place the barcode within the frame to auto-scan
+                    </p>
                   </div>
                 </div>
               </div>
