@@ -73,33 +73,51 @@ export default function AppShell({ children, title = 'Scanner App' }) {
     }
   }, [sidebarOpen, themeMenuOpen]);
 
+  // const handleLogout = async () => {
+  //   try {
+  //     try { sessionStorage.setItem('recentLogout', String(Date.now())); } catch {}
+  //     // Revoke and clear the current session
+  //     await supabase.auth.signOut({ scope: 'global' });
+
+  //     // Clear app-local data that might persist user context
+  //     try {
+  //       localStorage.removeItem('onboardingData');
+  //     } catch {}
+  //     try {
+  //       sessionStorage.removeItem('lastProduct');
+  //     } catch {}
+  //     try {
+  //       sessionStorage.removeItem('lastWarnings');
+  //     } catch {}
+
+  //     // Navigate to login and force a reload to ensure full state reset
+  //     router.replace('/login');
+  //     router.refresh();
+  //     setTimeout(() => {
+  //       if (typeof window !== 'undefined') window.location.reload();
+  //     }, 50);
+  //   } catch (e) {
+  //     console.error('Logout error', e);
+  //   }
+  // };
   const handleLogout = async () => {
+    try { sessionStorage.setItem('recentLogout', String(Date.now())); } catch {}
+  
     try {
-      try { sessionStorage.setItem('recentLogout', String(Date.now())); } catch {}
-      // Revoke and clear the current session
-      await supabase.auth.signOut({ scope: 'global' });
-
-      // Clear app-local data that might persist user context
-      try {
-        localStorage.removeItem('onboardingData');
-      } catch {}
-      try {
-        sessionStorage.removeItem('lastProduct');
-      } catch {}
-      try {
-        sessionStorage.removeItem('lastWarnings');
-      } catch {}
-
-      // Navigate to login and force a reload to ensure full state reset
-      router.replace('/login');
-      router.refresh();
-      setTimeout(() => {
-        if (typeof window !== 'undefined') window.location.reload();
-      }, 50);
+      // Use { scope: 'global' } only if you intend revoking all sessions everywhere
+      await supabase.auth.signOut(); // or signOut({ scope: 'global' })
     } catch (e) {
       console.error('Logout error', e);
+    } finally {
+      // Optional: keep these only here OR only in AuthContext listener—avoid duplication
+      try { localStorage.removeItem('onboardingData'); } catch {}
+      try { sessionStorage.removeItem('lastProduct'); } catch {}
+      try { sessionStorage.removeItem('lastWarnings'); } catch {}
+  
+      router.replace('/login'); // No refresh/reload needed
     }
   };
+  
 
   const navigate = (to) => {
     setSidebarOpen(false);
