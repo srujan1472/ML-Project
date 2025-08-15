@@ -22,7 +22,7 @@ const OnboardingPage = () => {
   const [noAllergies, setNoAllergies] = useState(false);
 
   const COMMON_ALLERGENS = useMemo(() => [
-    'Wheat', 'Almonds', 'Apple', 'Avoine', 'Banana', 'Barley', 'Cashew nuts', 'Soy', 'Celery',
+    'Wheat', 'Almonds', 'Apple', 'Avoine', 'Banana', 'Barley', 'Cashew nuts', 'Soy','Sugar', 'Celery',
     'Cereals', 'Chilli', 'Celery', 'Eggs', 'Fruit', 'Gelatin', 'Milk', 'Milk solids', 'Millet',
     'Mustard', 'Walnut', 'Nuts', 'Oats', 'Onion', 'Orange', 'Peanuts', 'Pecan nuts',
     'Soybeans '

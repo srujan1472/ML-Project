@@ -545,71 +545,73 @@ const NextjsScannerApp = () => {
                 Welcome, <span className="text-blue-600 dark:text-blue-400">{userName}</span>!
               </h1>
               <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                Scan product barcodes to get detailed nutritional information and personalized health analysis.
+                Scan product barcodes to get detailed nutritional information and  health analysis.
               </p>
             </div>
 
-            {/* Scanner Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-10 transition-all duration-300 hover:shadow-2xl">
-              <div className="p-6 md:p-8">
-                <div className="flex items-center mb-6">
-                  <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg mr-4">
-                    <Scan className="text-green-600 dark:text-green-400" size={24} />
+            {/* Scanner and OCR Cards Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+              {/* Scanner Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center mb-6">
+                    <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg mr-4">
+                      <Scan className="text-green-600 dark:text-green-400" size={24} />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Barcode Scanner</h3>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Barcode Scanner</h3>
-                </div>
-                
-                <p className="text-gray-600 dark:text-gray-300 mb-8">
-                  Open the camera and place the barcode inside the frame. Detection starts automatically.
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                  <button
-                    onClick={handleOpenScanner}
-                    disabled={processingBarcode}
-                    className="flex-1 flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    <Scan className="mr-2" size={20} />
-                    {processingBarcode ? 'Processing...' : 'Open Scanner'}
-                  </button>
-                </div>
-                
-                {/* Manual Barcode Input */}
-                <div className="mt-8">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Or enter barcode number manually
-                  </label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={manualBarcode}
-                      onChange={(e) => setManualBarcode(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleManualSubmit(); }}
-                      className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-                      placeholder="e.g. 8901234567890"
-                    />
+                  
+                  <p className="text-gray-600 dark:text-gray-300 mb-8">
+                    Open the camera and place the barcode inside the frame. Detection starts automatically.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 mb-8">
                     <button
-                      onClick={handleManualSubmit}
-                      disabled={processingBarcode || !manualBarcode.trim()}
-                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                      onClick={handleOpenScanner}
+                      disabled={processingBarcode}
+                      className="flex-1 flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      Search
+                      <Scan className="mr-2" size={20} />
+                      {processingBarcode ? 'Processing...' : 'Open Scanner'}
                     </button>
+                  </div>
+                  
+                  {/* Manual Barcode Input */}
+                  <div className="mt-8">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Or enter barcode number manually
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={manualBarcode}
+                        onChange={(e) => setManualBarcode(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleManualSubmit(); }}
+                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
+                        placeholder="e.g. 8901234567890"
+                      />
+                      <button
+                        onClick={handleManualSubmit}
+                        disabled={processingBarcode || !manualBarcode.trim()}
+                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        Search
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* OCR Text Extraction Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-10 transition-all duration-300 hover:shadow-2xl">
+              {/* OCR Text Extraction Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
               <div className="p-6 md:p-8">
                 <div className="flex items-center mb-6">
                   <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg mr-4">
                     <FileText className="text-purple-600 dark:text-purple-400" size={24} />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Text Extraction (OCR)</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Image capture</h3>
                 </div>
                 
                 <p className="text-gray-600 dark:text-gray-300 mb-8">
@@ -719,6 +721,7 @@ const NextjsScannerApp = () => {
                   )}
                 </div>
               </div>
+            </div>
             </div>
 
             {/* Results Section */}

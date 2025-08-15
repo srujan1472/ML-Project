@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, User, Home, BarChart3, Moon, Sun, Laptop2, LogOut, Camera, UserRound } from 'lucide-react';
+import { Menu, X, User, Home, BarChart3, Moon, Sun, Laptop2, LogOut, Camera, UserRound, Info } from 'lucide-react';
 
 export default function AppShell({ children, title = 'Scanner App' }) {
   const router = useRouter();
@@ -210,15 +210,6 @@ export default function AppShell({ children, title = 'Scanner App' }) {
             </li>
             <li>
               <button
-                onClick={() => navigate('/home')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              >
-                <Camera size={20} />
-                <span>Scanner</span>
-              </button>
-            </li>
-            <li>
-              <button
                 onClick={() => navigate('/home/onboarding')}
                 className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/home/onboarding' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
               >
@@ -233,6 +224,15 @@ export default function AppShell({ children, title = 'Scanner App' }) {
               >
                 <UserRound size={20} />
                 <span>Profile</span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/about')}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <Info size={20} />
+                <span>About Us</span>
               </button>
             </li>
           </ul>
