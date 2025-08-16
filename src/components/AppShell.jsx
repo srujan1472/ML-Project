@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, User, Home, BarChart3, Moon, Sun, Laptop2, LogOut, Camera, UserRound, Info } from 'lucide-react';
+import { Menu, X, User, Home, BarChart3, Moon, Sun, Laptop2, LogOut, Camera, UserRound, Info, Brain } from 'lucide-react';
 
 export default function AppShell({ children, title = 'Scanner App' }) {
   const router = useRouter();
@@ -104,17 +104,34 @@ export default function AppShell({ children, title = 'Scanner App' }) {
     try { sessionStorage.setItem('recentLogout', String(Date.now())); } catch {}
   
     try {
-      // Use { scope: 'global' } only if you intend revoking all sessions everywhere
-      await supabase.auth.signOut(); // or signOut({ scope: 'global' })
+      // Force logout with global scope to ensure all sessions are cleared
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (e) {
-      console.error('Logout error', e);
+      console.error('Logout error:', e);
+      // Even if Supabase logout fails, clear local data and redirect
     } finally {
-      // Optional: keep these only here OR only in AuthContext listener—avoid duplication
-      try { localStorage.removeItem('onboardingData'); } catch {}
-      try { sessionStorage.removeItem('lastProduct'); } catch {}
-      try { sessionStorage.removeItem('lastWarnings'); } catch {}
-  
-      router.replace('/login'); // No refresh/reload needed
+      // Clear all local storage and session storage
+      try { 
+        localStorage.clear(); 
+        sessionStorage.clear(); 
+      } catch {}
+      
+      // Force redirect to login page
+      try {
+        router.replace('/login');
+        // Force a hard refresh to clear any cached state
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+        }, 100);
+      } catch (redirectError) {
+        console.error('Redirect error:', redirectError);
+        // Fallback: force page reload
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
     }
   };
   
@@ -215,6 +232,15 @@ export default function AppShell({ children, title = 'Scanner App' }) {
               >
                 <BarChart3 size={20} />
                 <span>Onboarding</span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/analysis')}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/analysis' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+              >
+                <Brain size={20} />
+                <span>Ingredient Analysis</span>
               </button>
             </li>
             <li>

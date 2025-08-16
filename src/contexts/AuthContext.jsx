@@ -19,8 +19,28 @@ export function AuthProvider({ children }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          const { data: { user } } = await supabase.auth.getUser();
-          setUser(user);
+          setUser(session.user);
+          
+          // Check if session is about to expire (within 5 minutes)
+          const expiresAt = session.expires_at * 1000; // Convert to milliseconds
+          const now = Date.now();
+          const fiveMinutes = 5 * 60 * 1000;
+          
+          if (expiresAt - now < fiveMinutes) {
+            console.log('Session expiring soon, refreshing...');
+            try {
+              const { data, error } = await supabase.auth.refreshSession();
+              if (error) {
+                console.error('Error refreshing session:', error);
+                setUser(null);
+              } else if (data.session) {
+                setUser(data.session.user);
+              }
+            } catch (refreshError) {
+              console.error('Session refresh failed:', refreshError);
+              setUser(null);
+            }
+          }
         } else {
           setUser(null);
         }
@@ -38,15 +58,27 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
-          if (session) {
-            const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
+          console.log('Auth state change:', event, session ? 'session exists' : 'no session');
+          
+          if (session && session.user) {
+            setUser(session.user);
           } else {
             setUser(null);
-            try { localStorage.removeItem('onboardingData'); } catch {}
-            try { sessionStorage.removeItem('lastProduct'); } catch {}
-            try { sessionStorage.removeItem('lastWarnings'); } catch {}
+            // Clear all local data when session is lost
+            try { 
+              localStorage.clear(); 
+              sessionStorage.clear(); 
+            } catch {}
+            
+            // If we're on a protected page and session is lost, redirect to login
+            const protectedPages = ['/home', '/products', '/analysis', '/home/onboarding', '/home/profile'];
+            if (protectedPages.some(page => pathname.startsWith(page))) {
+              router.replace('/login');
+            }
           }
+        } catch (error) {
+          console.error('Error in auth state change:', error);
+          setUser(null);
         } finally {
           setLoading(false);
         }
@@ -57,6 +89,26 @@ export function AuthProvider({ children }) {
       subscription?.unsubscribe();
     };
   }, []);
+
+  // Periodic session check to prevent expiration issues
+  useEffect(() => {
+    if (!user) return;
+
+    const sessionCheckInterval = setInterval(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log('Session lost during periodic check');
+          setUser(null);
+          router.replace('/login');
+        }
+      } catch (error) {
+        console.error('Error in periodic session check:', error);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(sessionCheckInterval);
+  }, [user, router]);
 
   // Post-auth navigation smoothing: when user becomes available on login pages, go to /home
   useEffect(() => {

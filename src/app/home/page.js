@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Scan, X, AlertTriangle, CheckCircle, Info, Upload, FileText, Image } from 'lucide-react';
+import { Camera, Scan, X, AlertTriangle, CheckCircle, Info, Upload, FileText, Image, Brain } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
@@ -704,13 +704,22 @@ const NextjsScannerApp = () => {
                           <CheckCircle className="text-green-600 dark:text-green-400 mr-2" size={20} />
                           <span className="font-medium text-green-800 dark:text-green-200">Extracted Text</span>
                         </div>
-                        <button
-                          onClick={() => navigator.clipboard.writeText(ocrText)}
-                          className="text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
-                          title="Copy to clipboard"
-                        >
-                          Copy
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => router.push(`/analysis?text=${encodeURIComponent(ocrText)}`)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center"
+                          >
+                            <Brain className="mr-1" size={14} />
+                            Analyze with AI
+                          </button>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(ocrText)}
+                            className="text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                            title="Copy to clipboard"
+                          >
+                            Copy
+                          </button>
+                        </div>
                       </div>
                       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 max-h-64 overflow-y-auto">
                         <pre className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap font-sans">
