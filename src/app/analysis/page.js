@@ -13,6 +13,7 @@ const IngredientAnalysisPage = () => {
   const [error, setError] = useState(null);
   const [originalText, setOriginalText] = useState('');
   const [selectedModel, setSelectedModel] = useState('mistral:7b');
+  const [manualText, setManualText] = useState('');
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -20,9 +21,46 @@ const IngredientAnalysisPage = () => {
   useEffect(() => {
     // Get OCR text from URL parameters
     const ocrText = searchParams.get('text');
-    if (ocrText) {
-      setOriginalText(decodeURIComponent(ocrText));
-      analyzeIngredients(decodeURIComponent(ocrText));
+    console.log('Raw URL parameter:', ocrText);
+    
+    if (ocrText && ocrText.trim() !== '') {
+      try {
+        // First, try to decode the parameter safely
+        let decodedText;
+        try {
+          decodedText = decodeURIComponent(ocrText);
+        } catch (decodeError) {
+          console.error('decodeURIComponent failed, trying alternative decoding:', decodeError);
+          // Fallback: try to decode with replace for invalid characters
+          decodedText = decodeURIComponent(ocrText.replace(/[^\w\-._~:/?#[\]@!$&'()*+,;=%]/g, ''));
+        }
+        
+        console.log('Decoded text:', decodedText);
+        console.log('Text length:', decodedText.length);
+        
+        if (decodedText && decodedText.length > 0) {
+          setOriginalText(decodedText);
+          analyzeIngredients(decodedText);
+        } else {
+          console.error('Decoded text is empty');
+          setError('No text content found in URL parameter');
+        }
+      } catch (error) {
+        console.error('Error processing URL parameter:', error);
+        console.error('Original parameter:', ocrText);
+        
+        // Try to extract text even if decoding fails
+        if (ocrText && ocrText.length > 0) {
+          console.log('Attempting to use raw parameter as fallback');
+          setOriginalText(ocrText);
+          analyzeIngredients(ocrText);
+        } else {
+          setError('Unable to process text parameter from URL');
+        }
+      }
+    } else {
+      console.log('No text parameter found in URL');
+      // Don't set error here, just show the empty state
     }
   }, [searchParams]);
 
@@ -97,7 +135,37 @@ Please provide a comprehensive analysis in about 10 lines:`;
 
   const retryAnalysis = () => {
     if (originalText) {
+      console.log('Retrying analysis with text:', originalText);
       analyzeIngredients(originalText);
+    } else {
+      console.log('No original text to retry');
+      setError('No text available to analyze');
+    }
+  };
+
+  const testOllamaConnection = async () => {
+    try {
+      console.log('Testing Ollama connection...');
+      const response = await fetch('http://localhost:11434/api/tags');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Available models:', data);
+        alert(`Ollama is running! Available models: ${data.models?.map(m => m.name).join(', ') || 'None'}`);
+      } else {
+        alert('Ollama is not responding. Please start Ollama service.');
+      }
+    } catch (error) {
+      console.error('Ollama connection test failed:', error);
+      alert('Cannot connect to Ollama. Please make sure it is running on http://localhost:11434/');
+    }
+  };
+
+  const analyzeManualText = () => {
+    if (manualText && manualText.trim() !== '') {
+      setOriginalText(manualText);
+      analyzeIngredients(manualText);
+    } else {
+      setError('Please enter some text to analyze');
     }
   };
 
@@ -208,9 +276,15 @@ Please provide a comprehensive analysis in about 10 lines:`;
                  </span>
                </div>
              </div>
-             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-               Make sure your Ollama service is running on http://localhost:11434/
-             </p>
+                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                Make sure your Ollama service is running on http://localhost:11434/
+              </p>
+              <button
+                onClick={testOllamaConnection}
+                className="mt-3 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+              >
+                Test Ollama Connection
+              </button>
            </div>
          </div>
 
@@ -308,8 +382,26 @@ Please provide a comprehensive analysis in about 10 lines:`;
                   No Ingredients to Analyze
                 </h4>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Please scan an image with ingredients text first to get started.
+                  Please scan an image with ingredients text first to get started, or enter text manually below.
                 </p>
+                
+                {/* Manual Text Input */}
+                <div className="max-w-md mx-auto mb-6">
+                  <textarea
+                    value={manualText}
+                    onChange={(e) => setManualText(e.target.value)}
+                    placeholder="Enter ingredients text manually here..."
+                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                    rows={4}
+                  />
+                  <button
+                    onClick={analyzeManualText}
+                    disabled={!manualText.trim()}
+                    className="mt-3 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Analyze Manual Text
+                  </button>
+                </div>
                 <button
                   onClick={goBack}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

@@ -706,7 +706,18 @@ const NextjsScannerApp = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => router.push(`/analysis?text=${encodeURIComponent(ocrText)}`)}
+                            onClick={() => {
+                              try {
+                                // Clean and encode the text properly
+                                const cleanText = ocrText.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+                                const encodedText = encodeURIComponent(cleanText);
+                                console.log('Navigating to analysis with encoded text:', encodedText);
+                                router.push(`/analysis?text=${encodedText}`);
+                              } catch (error) {
+                                console.error('Error encoding text for URL:', error);
+                                alert('Error preparing text for analysis. Please try again.');
+                              }
+                            }}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center"
                           >
                             <Brain className="mr-1" size={14} />
