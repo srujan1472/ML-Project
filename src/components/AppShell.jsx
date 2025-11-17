@@ -1,23 +1,37 @@
-"use client"
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useTheme } from 'next-themes';
-import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from '@/contexts/AuthContext';
-import { Menu, X, User, Home, BarChart3, Moon, Sun, Laptop2, LogOut, Camera, UserRound, Info, Brain } from 'lucide-react';
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Menu,
+  X,
+  User,
+  Home,
+  BarChart3,
+  Moon,
+  Sun,
+  Laptop2,
+  LogOut,
+  Camera,
+  UserRound,
+  Info,
+  Brain,
+} from "lucide-react";
 
-export default function AppShell({ children, title = 'Scanner App' }) {
+export default function AppShell({ children, title = "Scanner App" }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
 
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const isDark = resolvedTheme === "dark";
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
-  const [profileName, setProfileName] = useState('');
+  const [profileName, setProfileName] = useState("");
   const sidebarRef = useRef(null);
   const themeMenuRef = useRef(null);
 
@@ -28,23 +42,25 @@ export default function AppShell({ children, title = 'Scanner App' }) {
       if (!user) return;
       try {
         const { data, error } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
           .maybeSingle();
         if (!isCancelled && data?.full_name) {
           setProfileName(data.full_name);
           return;
         }
         if (!isCancelled) {
-          const metaName = user?.user_metadata?.full_name || '';
-          const fallback = metaName || (user?.email ? user.email.split('@')[0] : 'User');
+          const metaName = user?.user_metadata?.full_name || "";
+          const fallback =
+            metaName || (user?.email ? user.email.split("@")[0] : "User");
           setProfileName(fallback);
         }
       } catch {
         if (!isCancelled) {
-          const metaName = user?.user_metadata?.full_name || '';
-          const fallback = metaName || (user?.email ? user.email.split('@')[0] : 'User');
+          const metaName = user?.user_metadata?.full_name || "";
+          const fallback =
+            metaName || (user?.email ? user.email.split("@")[0] : "User");
           setProfileName(fallback);
         }
       }
@@ -57,19 +73,30 @@ export default function AppShell({ children, title = 'Scanner App' }) {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target) && sidebarOpen) {
-        const menuButton = document.querySelector('[data-testid="menu-button"]');
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target) &&
+        sidebarOpen
+      ) {
+        const menuButton = document.querySelector(
+          '[data-testid="menu-button"]'
+        );
         if (menuButton && !menuButton.contains(event.target)) {
           setSidebarOpen(false);
         }
       }
-      if (themeMenuRef.current && !themeMenuRef.current.contains(event.target) && themeMenuOpen) {
+      if (
+        themeMenuRef.current &&
+        !themeMenuRef.current.contains(event.target) &&
+        themeMenuOpen
+      ) {
         setThemeMenuOpen(false);
       }
     };
     if (sidebarOpen || themeMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [sidebarOpen, themeMenuOpen]);
 
@@ -101,52 +128,64 @@ export default function AppShell({ children, title = 'Scanner App' }) {
   //   }
   // };
   const handleLogout = async () => {
-    try { sessionStorage.setItem('recentLogout', String(Date.now())); } catch {}
-  
     try {
+      // Set a flag to indicate intentional logout
+      sessionStorage.setItem("intentionalLogout", "true");
+
       // Force logout with global scope to ensure all sessions are cleared
-      await supabase.auth.signOut({ scope: 'global' });
+      await supabase.auth.signOut({ scope: "global" });
     } catch (e) {
-      console.error('Logout error:', e);
-      // Even if Supabase logout fails, clear local data and redirect
+      console.error("Logout error:", e);
     } finally {
-      // Clear all local storage and session storage
-      try { 
-        localStorage.clear(); 
-        sessionStorage.clear(); 
-      } catch {}
-      
-      // Force redirect to login page
+      // Clear all local storage and session storage except the intentionalLogout flag
       try {
-        router.replace('/login');
-        // Force a hard refresh to clear any cached state
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-          }
-        }, 100);
-      } catch (redirectError) {
-        console.error('Redirect error:', redirectError);
-        // Fallback: force page reload
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+        const intentionalLogout = sessionStorage.getItem("intentionalLogout");
+        localStorage.clear();
+        sessionStorage.clear();
+        // Restore the flag after clearing
+        if (intentionalLogout) {
+          sessionStorage.setItem("intentionalLogout", intentionalLogout);
         }
-      }
+      } catch {}
+
+      // Always redirect to login page
+      router.replace("/login");
+
+      // Force a hard refresh to clear any cached state
+      setTimeout(() => {
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+      }, 100);
     }
   };
-  
 
   const navigate = (to) => {
     setSidebarOpen(false);
     router.push(to);
   };
 
-  const themeIcon = theme === 'system' ? <Laptop2 size={20} /> : isDark ? <Moon size={20} /> : <Sun size={20} />;
+  const themeIcon =
+    theme === "system" ? (
+      <Laptop2 size={20} />
+    ) : isDark ? (
+      <Moon size={20} />
+    ) : (
+      <Sun size={20} />
+    );
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div
+      className={`min-h-screen transition-colors duration-300 ${
+        isDark ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
+      }`}
+    >
       {/* Top Navbar */}
-      <nav className={`border-b px-4 py-3 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <nav
+        className={`border-b px-4 py-3 ${
+          isDark ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
@@ -159,7 +198,10 @@ export default function AppShell({ children, title = 'Scanner App' }) {
             <h1 className="text-xl font-semibold">{title}</h1>
           </div>
 
-          <div className="flex items-center space-x-3 relative" ref={themeMenuRef}>
+          <div
+            className="flex items-center space-x-3 relative"
+            ref={themeMenuRef}
+          >
             <button
               onClick={() => setThemeMenuOpen((v) => !v)}
               className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -168,14 +210,38 @@ export default function AppShell({ children, title = 'Scanner App' }) {
               {themeIcon}
             </button>
             {themeMenuOpen && (
-              <div className={`absolute right-0 top-10 z-50 w-40 rounded-md shadow-lg ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                <button onClick={() => { setTheme('light'); setThemeMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+              <div
+                className={`absolute right-0 top-10 z-50 w-40 rounded-md shadow-lg ${
+                  isDark
+                    ? "bg-gray-800 border border-gray-700"
+                    : "bg-white border border-gray-200"
+                }`}
+              >
+                <button
+                  onClick={() => {
+                    setTheme("light");
+                    setThemeMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                >
                   <Sun size={16} /> Light
                 </button>
-                <button onClick={() => { setTheme('dark'); setThemeMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setTheme("dark");
+                    setThemeMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                >
                   <Moon size={16} /> Dark
                 </button>
-                <button onClick={() => { setTheme('system'); setThemeMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setTheme("system");
+                    setThemeMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                >
                   <Laptop2 size={16} /> System
                 </button>
               </div>
@@ -192,7 +258,9 @@ export default function AppShell({ children, title = 'Scanner App' }) {
               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
                 <User size={18} />
               </div>
-              <span className="font-medium truncate">{profileName || 'User'}</span>
+              <span className="font-medium truncate">
+                {profileName || "User"}
+              </span>
             </div>
           </div>
         </div>
@@ -200,17 +268,33 @@ export default function AppShell({ children, title = 'Scanner App' }) {
 
       {/* Sidebar overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setSidebarOpen(false)}></div>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
       )}
 
       {/* Sidebar */}
       <div
         ref={sidebarRef}
-        className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 w-80 ${isDark ? 'bg-gray-800' : 'bg-white'} border-r ${isDark ? 'border-gray-700' : 'border-gray-200'} transform transition-transform duration-300 ease-in-out`}
+        className={`${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } fixed inset-y-0 left-0 z-50 w-80 ${
+          isDark ? "bg-gray-800" : "bg-white"
+        } border-r ${
+          isDark ? "border-gray-700" : "border-gray-200"
+        } transform transition-transform duration-300 ease-in-out`}
       >
-        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div
+          className={`flex items-center justify-between p-4 border-b ${
+            isDark ? "border-gray-700" : "border-gray-200"
+          }`}
+        >
           <h2 className="text-lg font-semibold">Navigation</h2>
-          <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
             <X size={20} />
           </button>
         </div>
@@ -218,8 +302,16 @@ export default function AppShell({ children, title = 'Scanner App' }) {
           <ul className="space-y-2">
             <li>
               <button
-                onClick={() => navigate('/home')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/home' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+                onClick={() => navigate("/home")}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${
+                  isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                } ${
+                  pathname === "/home"
+                    ? isDark
+                      ? "bg-gray-700"
+                      : "bg-gray-100"
+                    : ""
+                }`}
               >
                 <Home size={20} />
                 <span>Dashboard</span>
@@ -227,8 +319,16 @@ export default function AppShell({ children, title = 'Scanner App' }) {
             </li>
             <li>
               <button
-                onClick={() => navigate('/home/onboarding')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/home/onboarding' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+                onClick={() => navigate("/home/onboarding")}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${
+                  isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                } ${
+                  pathname === "/home/onboarding"
+                    ? isDark
+                      ? "bg-gray-700"
+                      : "bg-gray-100"
+                    : ""
+                }`}
               >
                 <BarChart3 size={20} />
                 <span>Onboarding</span>
@@ -236,8 +336,16 @@ export default function AppShell({ children, title = 'Scanner App' }) {
             </li>
             <li>
               <button
-                onClick={() => navigate('/analysis')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/analysis' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+                onClick={() => navigate("/analysis")}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${
+                  isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                } ${
+                  pathname === "/analysis"
+                    ? isDark
+                      ? "bg-gray-700"
+                      : "bg-gray-100"
+                    : ""
+                }`}
               >
                 <Brain size={20} />
                 <span>Ingredient Analysis</span>
@@ -245,8 +353,16 @@ export default function AppShell({ children, title = 'Scanner App' }) {
             </li>
             <li>
               <button
-                onClick={() => navigate('/home/profile')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} ${pathname === '/home/profile' ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}`}
+                onClick={() => navigate("/home/profile")}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${
+                  isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                } ${
+                  pathname === "/home/profile"
+                    ? isDark
+                      ? "bg-gray-700"
+                      : "bg-gray-100"
+                    : ""
+                }`}
               >
                 <UserRound size={20} />
                 <span>Profile</span>
@@ -254,15 +370,21 @@ export default function AppShell({ children, title = 'Scanner App' }) {
             </li>
             <li>
               <button
-                onClick={() => navigate('/about')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                onClick={() => navigate("/home/about")}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg ${
+                  isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                }`}
               >
                 <Info size={20} />
                 <span>About Us</span>
               </button>
             </li>
           </ul>
-          <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-100'} mt-8 p-4 rounded-lg`}>
+          <div
+            className={`${
+              isDark ? "bg-gray-700" : "bg-gray-100"
+            } mt-8 p-4 rounded-lg`}
+          >
             <h3 className="font-medium mb-2">Scanner App</h3>
             <p className="text-sm opacity-75">Version 1.0.0</p>
             <p className="text-sm opacity-75">© 2024 Scanner Inc.</p>
@@ -275,5 +397,3 @@ export default function AppShell({ children, title = 'Scanner App' }) {
     </div>
   );
 }
-
-

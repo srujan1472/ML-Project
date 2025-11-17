@@ -239,10 +239,10 @@ Please provide a comprehensive analysis in about 10 lines:`;
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            {/* <div className="flex items-center space-x-2">
               <Brain className="text-blue-600 dark:text-blue-400" size={24} />
               <span className="text-sm text-gray-600 dark:text-gray-400">Local LLM</span>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -263,7 +263,7 @@ Please provide a comprehensive analysis in about 10 lines:`;
         )}
 
                  {/* Model Info */}
-         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden mb-6">
+         {/* <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden mb-6">
            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/20">
              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Model</h3>
            </div>
@@ -286,7 +286,7 @@ Please provide a comprehensive analysis in about 10 lines:`;
                 Test Ollama Connection
               </button>
            </div>
-         </div>
+         </div> */}
 
         {/* Analysis Section */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden">

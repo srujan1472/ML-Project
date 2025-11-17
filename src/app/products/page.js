@@ -1014,7 +1014,7 @@ function ProductDetailsContent() {
 
 
              {/* Raw JSON fallback */}
-            <div className="lg:col-span-12">
+            {/* <div className="lg:col-span-12">
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/80">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Raw Product JSON</h3>
@@ -1025,7 +1025,7 @@ function ProductDetailsContent() {
                   </pre>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

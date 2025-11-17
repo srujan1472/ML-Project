@@ -70,10 +70,18 @@ export function AuthProvider({ children }) {
               sessionStorage.clear(); 
             } catch {}
             
-            // If we're on a protected page and session is lost, redirect to login
+            // Check if this is an intentional logout
+            const intentionalLogout = typeof window !== 'undefined' ? sessionStorage.getItem('intentionalLogout') : null;
+            
+            // If we're on a protected page and session is lost (not due to intentional logout), redirect to unauthorized page
             const protectedPages = ['/home', '/products', '/analysis', '/home/onboarding', '/home/profile'];
-            if (protectedPages.some(page => pathname.startsWith(page))) {
-              router.replace('/login');
+            if (protectedPages.some(page => pathname.startsWith(page)) && !intentionalLogout) {
+              router.replace('/unauthorized');
+            }
+            
+            // Clear the intentional logout flag if it exists
+            if (intentionalLogout && typeof window !== 'undefined') {
+              sessionStorage.removeItem('intentionalLogout');
             }
           }
         } catch (error) {
@@ -100,7 +108,19 @@ export function AuthProvider({ children }) {
         if (!session) {
           console.log('Session lost during periodic check');
           setUser(null);
-          router.replace('/login');
+          
+          // Check if this is an intentional logout
+          const intentionalLogout = typeof window !== 'undefined' ? sessionStorage.getItem('intentionalLogout') : null;
+          
+          // Only redirect to unauthorized if not an intentional logout
+          if (!intentionalLogout) {
+            router.replace('/unauthorized');
+          }
+          
+          // Clear the intentional logout flag if it exists
+          if (intentionalLogout && typeof window !== 'undefined') {
+            sessionStorage.removeItem('intentionalLogout');
+          }
         }
       } catch (error) {
         console.error('Error in periodic session check:', error);
